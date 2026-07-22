@@ -1,0 +1,578 @@
+@import "tailwindcss";
+
+:root {
+  /* Light (white + gold) theme for the public landing page */
+  --background: #f7f5f1;      /* warm off-white page */
+  --surface: #ffffff;         /* white cards */
+  --surface-2: #f1ece3;       /* light warm panel / inputs */
+  --foreground: #1c2127;
+  --primary: #a87f2b;         /* readable gold */
+  --primary-dark: #876419;    /* deep gold */
+  --accent: #d9b659;          /* bright gold */
+  --ink: #1c2127;
+  --muted: #6b7280;
+  --border: rgba(168, 127, 43, 0.22);
+  --on-primary: #0a0e12;      /* text/icons that sit on a primary/accent fill */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-accent: var(--accent);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-latin), var(--font-arabic), system-ui, sans-serif;
+}
+
+/* Doctor dashboard runs a light (white + gold) theme, scoped here so the
+   public landing page keeps its dark/gold look. Overriding these custom
+   properties re-tints every bg-surface / text-ink / border-primary utility. */
+.dash-light {
+  --background: #f7f4ef;     /* warm off-white page */
+  --surface: #ffffff;        /* white cards */
+  --surface-2: #f1ebe1;      /* light warm panel / inputs */
+  --foreground: #1c2127;
+  --ink: #1c2127;
+  --primary: #a87f2b;        /* readable gold */
+  --primary-dark: #876419;   /* deep gold */
+  --accent: #d9b659;         /* bright gold */
+  --muted: #6b7280;
+  --border: rgba(168, 127, 43, 0.22);
+  color: var(--ink);
+}
+
+/* Dark variant of the dashboard theme (toggled from the topbar). Same gold
+   accent, dark warm-neutral surfaces. Re-tints every bg-surface / text-ink /
+   border-primary utility used by the dashboard components. */
+.dash-dark {
+  --background: #0f1216;     /* near-black page */
+  --surface: #171b21;        /* dark cards */
+  --surface-2: #1f242c;      /* dark panel / inputs */
+  --foreground: #e6e8eb;
+  --ink: #e6e8eb;
+  --primary: #d9b659;        /* brighter gold for contrast */
+  --primary-dark: #a87f2b;   /* deep gold */
+  --accent: #e9cf86;         /* bright gold */
+  --muted: #9aa3af;
+  --border: rgba(217, 182, 89, 0.24);
+  color: var(--ink);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-latin), var(--font-arabic), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+html[dir="rtl"] body {
+  font-family: var(--font-arabic), var(--font-latin), system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--primary);
+  color: #0a0e12;
+}
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--background); }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(var(--primary-dark), var(--primary));
+  border-radius: 99px;
+}
+
+/* ---------- Reveal-on-scroll ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(34px);
+  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------- Floating gradient blobs ---------- */
+@keyframes float-slow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(24px, -34px) scale(1.1); }
+}
+.animate-float-slow { animation: float-slow 14s ease-in-out infinite; }
+
+@keyframes float-slow-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-28px, 28px) scale(1.14); }
+}
+.animate-float-slow-2 { animation: float-slow-2 18s ease-in-out infinite; }
+
+/* ---------- Aurora drifting background ---------- */
+@keyframes aurora {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.aurora {
+  background: linear-gradient(
+    120deg,
+    rgba(201, 162, 75, 0.18),
+    rgba(231, 201, 119, 0.05),
+    rgba(201, 162, 75, 0.18)
+  );
+  background-size: 200% 200%;
+  animation: aurora 12s ease infinite;
+}
+
+/* ---------- Marquee ---------- */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-marquee { animation: marquee 28s linear infinite; }
+
+/* ---------- Thin scrollbar for dashboard panels ---------- */
+.custom-scroll { scrollbar-width: thin; scrollbar-color: var(--primary-dark) transparent; }
+.custom-scroll::-webkit-scrollbar { width: 7px; height: 7px; }
+.custom-scroll::-webkit-scrollbar-track { background: transparent; }
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: rgba(201, 162, 75, 0.35);
+  border-radius: 99px;
+}
+.custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(201, 162, 75, 0.6); }
+
+/* ---------- Gold shimmer text ---------- */
+@keyframes shimmer {
+  to { background-position: 200% center; }
+}
+.text-gradient {
+  background: linear-gradient(
+    100deg,
+    var(--primary-dark) 12%,
+    var(--accent) 42%,
+    var(--primary) 68%,
+    var(--primary-dark) 92%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 5s linear infinite;
+}
+
+/* ---------- Letter-by-letter name reveal ---------- */
+@keyframes letter-in {
+  0% { opacity: 0; transform: translateY(0.5em) rotateX(-80deg); }
+  100% { opacity: 1; transform: translateY(0) rotateX(0); }
+}
+.letter {
+  display: inline-block;
+  opacity: 0;
+  animation: letter-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transform-origin: bottom;
+}
+.letter-space { width: 0.32em; }
+
+/* Readable solid-gold name with subtle glow */
+.name-gold {
+  color: var(--primary);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 6px 18px rgba(168, 127, 43, 0.18);
+}
+
+/* ---------- Typing caret ---------- */
+.type-caret {
+  display: inline-block;
+  width: 0.06em;
+  min-width: 3px;
+  height: 1em;
+  margin-inline-start: 0.06em;
+  vertical-align: -0.12em;
+  background: var(--primary);
+  box-shadow: 0 0 12px rgba(201, 162, 75, 0.7);
+}
+@keyframes caret-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.type-caret-blink { animation: caret-blink 0.8s step-end infinite; }
+
+/* Doctor portrait that fades into the dark background (looks background-free) */
+.photo-fade {
+  -webkit-mask-image: radial-gradient(
+    ellipse 72% 78% at 50% 42%,
+    #000 58%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 72% 78% at 50% 42%,
+    #000 58%,
+    transparent 100%
+  );
+}
+
+/* ---------- Fade/slide entrance ---------- */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ---------- Glow pulse ---------- */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201, 162, 75, 0.45); }
+  50% { box-shadow: 0 0 30px 6px rgba(201, 162, 75, 0.25); }
+}
+.animate-glow { animation: glow-pulse 3s ease-in-out infinite; }
+
+/* ---------- Spin slow (decorative ring) ---------- */
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.animate-spin-slow { animation: spin-slow 24s linear infinite; }
+
+/* ---------- Bounce arrow ---------- */
+@keyframes soft-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
+}
+.animate-soft-bounce { animation: soft-bounce 1.8s ease-in-out infinite; }
+
+/* ---------- Surfaces & helpers ---------- */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+}
+
+.card-hover {
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s ease, border-color 0.45s ease, background 0.45s ease;
+}
+.card-hover:hover {
+  transform: translateY(-8px);
+}
+
+.gold-border { border: 1px solid var(--border); }
+
+/* ===== Interactive team hero (cut-out figures on a stage) ===== */
+.team-stage { isolation: isolate; }
+
+.stage-figure {
+  position: relative;
+  flex: 0 0 auto;
+  cursor: pointer;
+  transform: translateY(8px) scale(0.9);
+  transform-origin: bottom center;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.stage-figure[data-active="true"] {
+  transform: translateY(-8px) scale(1.06);
+}
+
+.figure-frame {
+  position: relative;
+  display: block;
+  width: clamp(6rem, 20vw, 19rem);
+  aspect-ratio: 720 / 1040;
+  /* fade only the bottom so the chest/arms blend softly into the page */
+  -webkit-mask-image: linear-gradient(0deg, transparent 0, #000 16%, #000 100%);
+  mask-image: linear-gradient(0deg, transparent 0, #000 16%, #000 100%);
+}
+/* Solo hero figure (single doctor) — rendered much larger than a lineup member.
+   Aspect matches the cutout (704x789) so the photo fills without a dead gap. */
+.figure-frame--solo {
+  width: clamp(17rem, 60vw, 40rem);
+  aspect-ratio: 704 / 789;
+}
+.figure-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom;
+  /* default: softly de-emphasised (out of focus) on the light stage */
+  filter: grayscale(0.8) brightness(1.02) contrast(0.95) blur(0.7px);
+  opacity: 0.5;
+  transition: filter 0.6s ease, opacity 0.6s ease;
+}
+/* on focus (hover or tap): snap to sharp, full-colour, glowing */
+.stage-figure[data-active="true"] .figure-img {
+  filter: grayscale(0) brightness(1.03) contrast(1.05)
+    drop-shadow(0 18px 22px rgba(0, 0, 0, 0.22))
+    drop-shadow(0 0 26px rgba(168, 127, 43, 0.45));
+  opacity: 1;
+  animation: figure-focus 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes figure-focus {
+  0% { filter: grayscale(0.8) brightness(1.02) blur(6px); }
+  100% { filter: grayscale(0) brightness(1.03) blur(0); }
+}
+
+.figure-halo {
+  position: absolute;
+  left: 50%;
+  bottom: 8%;
+  width: 130%;
+  aspect-ratio: 1 / 1;
+  translate: -50% 0;
+  z-index: -1;
+  background: radial-gradient(circle at 50% 50%, rgba(201, 162, 75, 0.4), rgba(201, 162, 75, 0) 62%);
+  filter: blur(20px);
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.stage-figure[data-active="true"] .figure-halo { opacity: 1; transform: scale(1); }
+
+.figure-label {
+  position: absolute;
+  inset-inline: 0;
+  bottom: -2.6rem;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink);
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+  pointer-events: none;
+}
+.stage-figure[data-active="true"] .figure-label {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+
+/* ===== Yellow neon light effect on doctor photo ===== */
+.neon-stage {
+  isolation: isolate;
+}
+
+/* Soft warm halo radiating behind the doctor */
+.neon-halo {
+  position: absolute;
+  inset: -8% -12% 0 -12%;
+  z-index: -1;
+  background: radial-gradient(
+    60% 55% at 50% 38%,
+    rgba(231, 201, 119, 0.55) 0%,
+    rgba(201, 162, 75, 0.32) 38%,
+    rgba(201, 162, 75, 0) 72%
+  );
+  filter: blur(28px);
+  animation: neon-pulse 3.6s ease-in-out infinite;
+}
+
+/* Angled neon beam streaking down onto the figure */
+.neon-beam {
+  position: absolute;
+  top: -14%;
+  left: 50%;
+  width: 130%;
+  height: 130%;
+  z-index: -1;
+  transform: translateX(-50%) rotate(8deg);
+  background: linear-gradient(
+    195deg,
+    rgba(255, 224, 130, 0.45) 0%,
+    rgba(231, 201, 119, 0.22) 26%,
+    rgba(201, 162, 75, 0) 55%
+  );
+  filter: blur(22px);
+  mix-blend-mode: screen;
+  animation: neon-flicker 5s steps(1, end) infinite;
+  pointer-events: none;
+}
+
+/* The photo itself: warm rim glow + grounding shadow */
+.neon-doctor {
+  filter:
+    drop-shadow(0 0 18px rgba(231, 201, 119, 0.65))
+    drop-shadow(0 0 42px rgba(201, 162, 75, 0.45))
+    drop-shadow(0 28px 38px rgba(0, 0, 0, 0.65));
+  animation: neon-glow 3.6s ease-in-out infinite;
+}
+
+@keyframes neon-pulse {
+  0%, 100% { opacity: 0.75; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes neon-glow {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 16px rgba(231, 201, 119, 0.55))
+      drop-shadow(0 0 38px rgba(201, 162, 75, 0.38))
+      drop-shadow(0 28px 38px rgba(0, 0, 0, 0.65));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 26px rgba(255, 224, 130, 0.85))
+      drop-shadow(0 0 60px rgba(201, 162, 75, 0.6))
+      drop-shadow(0 28px 38px rgba(0, 0, 0, 0.65));
+  }
+}
+
+@keyframes neon-flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.55; }
+  94% { opacity: 1; }
+  96% { opacity: 0.7; }
+  97% { opacity: 1; }
+}
+
+/* ===== Hero autoplay video (Ken Burns + ambient glow) ===== */
+.hero-video-card {
+  animation: hero-card-glow 4.5s ease-in-out infinite;
+}
+@keyframes hero-card-glow {
+  0%, 100% { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(201, 162, 75, 0.2), 0 0 28px rgba(201, 162, 75, 0.18); }
+  50% { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(201, 162, 75, 0.45), 0 0 55px rgba(201, 162, 75, 0.4); }
+}
+.ken-burns {
+  animation: ken-burns 18s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+@keyframes ken-burns {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.12); }
+}
+
+/* ===== Seamless hero video =====
+   A borderless clip that sits on the page like a native element. The clip has a
+   BLACK background; <SeamlessVideo> keys it out per-frame on a canvas (luminance
+   → alpha), so the lit 3D model floats directly on the page — identically on
+   desktop and mobile. A soft warm radial sits behind it so the floating model
+   feels grounded, not stark. */
+.hero-seamless {
+  position: relative;
+  filter: drop-shadow(0 20px 38px rgba(0, 0, 0, 0.14));
+}
+.hero-seamless::before {
+  content: "";
+  position: absolute;
+  inset: 4% 2%;
+  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(ellipse 60% 62% at 50% 48%, rgba(201, 162, 75, 0.16), transparent 70%);
+  filter: blur(8px);
+}
+.hero-seamless-video {
+  position: relative;
+  z-index: 1;
+  aspect-ratio: 4 / 5;
+  width: 100%;
+  object-fit: cover;
+  -webkit-mask-image: radial-gradient(ellipse 80% 84% at 50% 47%, #000 58%, transparent 92%);
+  mask-image: radial-gradient(ellipse 80% 84% at 50% 47%, #000 58%, transparent 92%);
+}
+
+/* ===== Video showcase: large autoplay clips ===== */
+/* Reel filmed sideways → rotate 90° upright. Frame keeps the resulting
+   landscape ratio (source 596x1280 → 1280x596). The video is sized as a
+   portrait box matching its native aspect, then rotated to fill the frame. */
+.rot-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1280 / 596;
+  overflow: hidden;
+}
+.rot-frame .rot-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 46.5625%;      /* = 596 / 1280  → equals frame height */
+  height: 214.7651%;    /* = 1280 / 596  → equals frame width  */
+  object-fit: cover;
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.video-card {
+  animation: video-card-in 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+@keyframes video-card-in {
+  0% { opacity: 0; transform: translateY(26px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ===== Implant animation: a white-background clip composited so it reads as a
+   seamless part of the page (a 3D animation), not a boxed video. The source is
+   1280x720 with a WHITE background and ~31px black letterbox bars top & bottom
+   (no side bars). We CROP those bars out (content-ratio stage + object-fit
+   cover), sit it on the page colour, use `multiply` (white -> page colour =
+   invisible), and feather the edges so no rectangle/frame shows. ===== */
+.implant-stage {
+  position: relative;
+  width: 100%;
+  /* Content-only ratio (720 - ~2x36 bars ≈ 648). Because this is wider/shorter
+     than the video's 16:9, object-fit: cover crops the top & bottom black bars
+     right out — deterministically, at every frame. */
+  aspect-ratio: 1280 / 648;
+  background: var(--background);
+  overflow: hidden;
+}
+.implant-anim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* crops the letterbox bars (stage is shorter than 16:9) */
+  /* The clip has a WHITE background; `multiply` over the page-coloured stage
+     turns that white into the exact page colour (it vanishes) while the lit 3D
+     model stays — so it reads as an inline animation, not a boxed video. This
+     only stays invisible because the section behind the stage is a FLAT page
+     colour (no ambient tint), so the stage's fill matches its surroundings and
+     no rectangle shows. A soft radial fade tidies the model's outline and a
+     bottom fade hides the baked "Full Mouth…" caption. */
+  mix-blend-mode: multiply;
+  -webkit-mask-image:
+    radial-gradient(82% 86% at 50% 45%, #000 60%, transparent 100%),
+    linear-gradient(to bottom, #000 60%, transparent 90%);
+  mask-image:
+    radial-gradient(82% 86% at 50% 45%, #000 60%, transparent 100%),
+    linear-gradient(to bottom, #000 60%, transparent 90%);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  animation: implant-float 9s ease-in-out infinite;
+}
+/* A little extra scale gives margin so no 1px black line ever survives the crop. */
+@keyframes implant-float {
+  0%, 100% { transform: translateY(0) scale(1.03); }
+  50% { transform: translateY(-8px) scale(1.05); }
+}
+
+/* ---------- Chat: highlight a follow-up reply when opened from an alert ---------- */
+@keyframes chat-glow {
+  0% { box-shadow: 0 0 0 0 rgba(201, 162, 75, 0.55); }
+  60% { box-shadow: 0 0 0 6px rgba(201, 162, 75, 0.12); }
+  100% { box-shadow: 0 0 0 0 rgba(201, 162, 75, 0); }
+}
+.chat-highlight {
+  animation: chat-glow 1.4s ease-out 3;
+  outline: 2px solid rgba(201, 162, 75, 0.65);
+  outline-offset: 1px;
+}
+
+/* ---------- Follow-up alert card: gentle floating attention ---------- */
+@keyframes alert-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.followup-alert { animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.followup-bell { animation: alert-float 2.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

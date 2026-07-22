@@ -1,0 +1,39 @@
+# Railway (Nixpacks) build for THE BOSS — web + doctor dashboard.
+#
+# Install must INCLUDE optional dependencies: Tailwind v4's lightningcss and
+# @tailwindcss/oxide (plus sharp and @next/swc) ship their platform-native
+# `.node` binaries as OPTIONAL deps, and `next build` needs them. Omitting
+# optional deps breaks the build with "Cannot find module lightningcss.*.node".
+#
+# The only heavy optional dep we don't want is Chromium (pulled by
+# whatsapp-web.js -> puppeteer for the booking bot, which is NOT deployed here).
+# PUPPETEER_SKIP_DOWNLOAD stops that ~150 MB download while still installing the
+# native build binaries above.
+#
+# devDependencies are force-included because Railway builds with
+# NODE_ENV=production (npm would otherwise omit tailwind + typescript).
+#
+# The start command + healthcheck live in railway.json.
+
+[variables]
+# Clinic timezone. Appointment slot/day math reads the process TZ; pin it so a
+# UTC host doesn't drift from the Cairo-formatted times shown to patients.
+# (instrumentation.ts also defaults this at runtime if unset.)
+TZ = "Africa/Cairo"
+PUPPETEER_SKIP_DOWNLOAD = "true"
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+NEXT_TELEMETRY_DISABLED = "1"
+
+[phases.install]
+# The committed package-lock.json is missing a few optional transitive entries
+# (cross-platform native/optional deps), so `npm ci` fails on Linux with EUSAGE
+# ("lock file not in sync"). `npm install` reconciles the lock in-place and still
+# installs the optional native build deps that `next build` needs (lightningcss,
+# @next/swc, @tailwindcss/oxide). --include=dev because Railway builds with
+# NODE_ENV=production (npm would otherwise omit tailwind + typescript).
+# TODO: regenerate a Linux-complete lockfile in CI and switch back to `npm ci`.
+cmds = ["npm install --include=dev --no-audit --no-fund"]
+
+[phases.build]
+dependsOn = ["install"]
+cmds = ["npx prisma generate", "npm run build"]

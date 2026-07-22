@@ -1,0 +1,716 @@
+// BDIC backend schema. Postgres in every environment (Railway provisions the
+// database; DATABASE_URL points at it). Run `prisma migrate deploy` on release.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Clinic staff who can sign in to the dashboard.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String?  @unique
+  passwordHash String
+  name         String
+  role         String   @default("doctor") // doctor | admin | staff
+  tokenVersion Int      @default(1) // bumped on logout / password change to revoke old JWTs
+  branchId     String? // multi-branch: staff member's home branch (null = unassigned)
+  branch       Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  @@index([branchId])
+}
+
+/// Append-only audit trail for sensitive/destructive actions (RBAC-gated routes,
+/// deletions, financial mutations). Written best-effort inside the same request;
+/// never blocks the primary operation. Query in the Audit Center.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String? // User.id that performed the action (null = system/unauthenticated)
+  actorName  String? // snapshot of the actor's display name at action time
+  action     String // e.g. "admin.reset", "doctor.delete", "payout.create"
+  entityType String? // e.g. "Doctor", "Payment", "Appointment"
+  entityId   String? // affected row id when applicable
+  summary    String? // short human-readable description
+  metadata   Json? // structured before/after or request context
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+}
+
+/// A person who has booked at least once.
+model Patient {
+  id            String            @id @default(cuid())
+  name          String
+  phone         String
+  email         String?
+  gender        String? // male | female
+  source        String            @default("booking") // booking | manual
+  notes         String?
+  medical       Json? // { bloodType, allergies, conditions, medications, notes }
+  createdAt     DateTime          @default(now())
+  deletedAt     DateTime? // soft-delete: non-null = hidden from normal queries (Recycle Bin)
+  deletedBy     String? // User.id who soft-deleted (snapshot for the Trash view)
+  appointments  Appointment[]
+  treatments    TreatmentRecord[]
+  payments      Payment[]
+  prescriptions Prescription[]
+
+  @@index([phone])
+}
+
+/// The clinic's catalog of operations/procedures (خلع، تركيب، حشو…), each with a
+/// default price. The doctor manages this list; treatment records snapshot the
+/// name + price at the time they're recorded so later edits don't rewrite history.
+model Procedure {
+  id        String    @id @default(cuid())
+  nameEn    String
+  nameAr    String
+  price     Decimal   @default(0) @db.Decimal(12, 2) // patient/charged price in EGP (net + profit)
+  cost      Decimal?  @db.Decimal(12, 2) // optional net cost (صافي): materials/lab, before profit — for clinic-profit precision
+  active    Boolean   @default(true)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime? // soft-delete: non-null = hidden from normal queries (Recycle Bin)
+  deletedBy String? // User.id who soft-deleted (snapshot for the Trash view)
+
+  treatments TreatmentRecord[]
+
+  @@index([active, sortOrder])
+}
+
+/// A procedure actually performed for a patient in a visit. Price is the amount
+/// charged (snapshot). Balance owed = sum(price) − sum(linked/patient payments).
+model TreatmentRecord {
+  id            String     @id @default(cuid())
+  patientId     String
+  patient       Patient    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  procedureId   String? // catalog link (null if custom or catalog entry was deleted)
+  procedure     Procedure? @relation(fields: [procedureId], references: [id], onDelete: SetNull)
+  appointmentId String? // optional link to the visit it happened in
+  nameEn        String
+  nameAr        String
+  basePrice     Decimal?   @db.Decimal(12, 2) // list/catalog price before any discount (for display)
+  discountPct   Decimal    @default(0) @db.Decimal(5, 2) // percentage discount applied (0–100)
+  price         Decimal    @default(0) @db.Decimal(12, 2) // net amount charged after discount (EGP) — the doctor commission base
+  cost          Decimal?   @db.Decimal(12, 2) // snapshot net cost (materials/lab) at time of operation, for clinic-profit precision
+  notes         String?
+  performedAt   DateTime   @default(now())
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime? // soft-delete: non-null = hidden from normal queries (Recycle Bin)
+  deletedBy     String? // User.id who soft-deleted (snapshot for the Trash view)
+
+  payments Payment[]
+  doctors  TreatmentDoctor[]
+
+  branchId String? // multi-branch: location this operation was performed at (null = unassigned)
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, performedAt])
+  @@index([procedureId])
+  @@index([branchId])
+}
+
+/// A payment received from a patient. May be tied to a specific treatment (an
+/// operation's part/full payment) or be a general account payment.
+model Payment {
+  id                String           @id @default(cuid())
+  patientId         String
+  patient           Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  treatmentRecordId String?
+  treatmentRecord   TreatmentRecord? @relation(fields: [treatmentRecordId], references: [id], onDelete: SetNull)
+  amount            Decimal          @default(0) @db.Decimal(12, 2) // EGP
+  method            String           @default("cash") // cash | card | insurance | transfer
+  note              String?
+  paidAt            DateTime         @default(now())
+  createdAt         DateTime         @default(now())
+  deletedAt         DateTime? // soft-delete: non-null = hidden from normal queries (Recycle Bin)
+  deletedBy         String? // User.id who soft-deleted (snapshot for the Trash view)
+  branchId          String? // multi-branch: location this payment was taken at (null = unassigned)
+  branch            Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, paidAt])
+  @@index([treatmentRecordId])
+  @@index([branchId])
+}
+
+/// A booking. Drives the whole confirm -> WhatsApp -> queue flow.
+model Appointment {
+  id             String   @id @default(cuid())
+  code           String   @unique // short public code used in /track/[code]
+  patientName    String
+  phone          String
+  serviceId      String
+  serviceLabelEn String
+  serviceLabelAr String
+  scheduledAt    DateTime // absolute appointment start
+  durationMin    Int      @default(30)
+  status         String   @default("pending") // pending | confirmed | declined | completed | cancelled
+  complaint      String?
+  offerTitle     String?
+  notes          String?
+  lang           String   @default("en") // patient's preferred language for messages
+  waChatId       String? // whatsapp-web.js chat id (msg.from) for reliable replies
+
+  confirmedAt    DateTime?
+  reminderSentAt DateTime?
+  queueOpenedAt  DateTime?
+  turnSentAt     DateTime?
+  completedAt    DateTime?
+  followupSentAt DateTime? // post-session follow-up ("how are you feeling?") sent once
+
+  patientId String?
+  patient   Patient?  @relation(fields: [patientId], references: [id])
+  doctorId  String? // optional: which doctor this visit is booked with
+  doctor    Doctor?   @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  branchId  String? // multi-branch: location this visit belongs to (null = unassigned)
+  branch    Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  messages  Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, scheduledAt])
+  @@index([phone])
+  @@index([doctorId])
+  @@index([patientId])
+  @@index([scheduledAt])
+  @@index([branchId])
+}
+
+/// A WhatsApp message tied to an appointment (audit log + idempotency).
+model Message {
+  id            String      @id @default(cuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  phone         String
+  kind          String // reserved | reminder | queue | turn | custom
+  body          String
+  provider      String      @default("mock") // mock | metaCloud | wa.me
+  status        String      @default("queued") // queued | sent | delivered | failed
+  waLink        String?
+  error         String?
+  createdAt     DateTime    @default(now())
+  sentAt        DateTime?
+
+  @@index([appointmentId, kind])
+}
+
+/// Simple key/value config (clinic hours, feature flags, etc.).
+model Setting {
+  key       String   @id
+  value     String // JSON
+  updatedAt DateTime @updatedAt
+}
+
+/// In-progress WhatsApp booking conversation, one row per chat (phone number).
+/// `state` is the step in the flow; `draft` is the JSON being collected.
+model WaConversation {
+  id               String    @id @default(cuid())
+  phone            String    @unique
+  chatId           String? // the whatsapp-web.js chat id (msg.from) used to reply reliably
+  state            String    @default("idle") // idle|day|slot|why|name|followup
+  draft            String? // JSON: { dateISO, dateLabel, slot, timeLabel, reason, patientName }
+  lang             String    @default("ar") // ar | en
+  agentPausedUntil DateTime? // while in the future, the booking bot stays silent (manual chat)
+  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime  @default(now())
+
+  @@index([updatedAt])
+}
+
+/// Outgoing WhatsApp messages the SERVER initiates (e.g. the doctor-confirm
+/// notification). The whatsapp-web.js worker polls this, sends them, and marks
+/// them sent — so server-side events reach the patient over the linked number.
+model WaOutbox {
+  id        String    @id @default(cuid())
+  phone     String
+  chatId    String? // exact whatsapp-web.js chat id to reply to (preferred over phone)
+  body      String
+  status    String    @default("queued") // queued | sent | failed
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+
+  @@index([status, createdAt])
+}
+
+/// A file attached to a patient (x-ray, intra-oral photo, scanned document).
+/// The binary lives on disk under the uploads dir; only metadata is in the DB.
+model PatientFile {
+  id          String    @id @default(cuid())
+  patientKey  String // local patient id (e.g. "pt-ahmed") or Patient.id
+  patientName String?
+  category    String    @default("xray") // xray | photo | document | medical
+  title       String?
+  fileName    String
+  mimeType    String
+  size        Int
+  storagePath String // path on disk, relative to the uploads dir
+  createdAt   DateTime  @default(now())
+  deletedAt   DateTime? // soft-delete: non-null = hidden from normal queries (Recycle Bin)
+  deletedBy   String? // User.id who soft-deleted (snapshot for the Trash view)
+
+  @@index([patientKey, createdAt])
+}
+
+/// A WhatsApp chat message to/from a patient — the doctor's "Client Messages"
+/// inbox. Logs every inbound patient message and every outbound message the
+/// clinic sends (post-session follow-ups + the doctor's manual replies), keyed
+/// by phone so they group into one conversation thread.
+model ChatMessage {
+  id        String    @id @default(cuid())
+  phone     String // normalized digits (the conversation key)
+  chatId    String? // exact whatsapp-web.js chat id used to reply (handles @lid)
+  direction String // "in" (from patient) | "out" (from clinic)
+  body      String
+  kind      String    @default("chat") // chat | followup | reply | manual
+  readAt    DateTime? // when the doctor read an inbound message (null = unread)
+  createdAt DateTime  @default(now())
+
+  @@index([phone, createdAt])
+  @@index([direction, readAt])
+}
+
+/// A doctor/practitioner at the clinic who can be assigned to operations. Managed
+/// by the owner (separate from the login `User`). `commissionPct` is the default
+/// percentage of the patient/charged price this doctor earns per operation; the
+/// clinic keeps the remainder. Editable per-operation at record time.
+model Doctor {
+  id            String    @id @default(cuid())
+  nameEn        String
+  nameAr        String
+  phone         String?
+  email         String?
+  specialtyEn   String?
+  specialtyAr   String?
+  photoUrl      String? // /uploads path or data URL for the profile picture
+  commissionPct Decimal   @default(0) @db.Decimal(5, 2) // default % of the charged price (0–100)
+  active        Boolean   @default(true)
+  sortOrder     Int       @default(0)
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime? // soft-delete: non-null = hidden from normal queries (Recycle Bin)
+  deletedBy     String? // User.id who soft-deleted (snapshot for the Trash view)
+
+  treatments    TreatmentDoctor[]
+  appointments  Appointment[]
+  payouts       DoctorPayout[]
+  prescriptions Prescription[]
+
+  branchId String? // multi-branch: doctor's home branch (null = unassigned)
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([active, sortOrder])
+  @@index([branchId])
+}
+
+/// Join row: a doctor assigned to a treatment/operation, with the commission/// percentage and earned amount SNAPSHOT at the time it was recorded (so later
+/// profile edits don't rewrite history). More than one doctor can share one
+/// operation; the clinic's share = price − Σ(amount).
+model TreatmentDoctor {
+  id                String          @id @default(cuid())
+  treatmentRecordId String
+  treatmentRecord   TreatmentRecord @relation(fields: [treatmentRecordId], references: [id], onDelete: Cascade)
+  doctorId          String
+  doctor            Doctor          @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  commissionPct     Decimal         @default(0) @db.Decimal(5, 2) // snapshot % of the charged price for this operation
+  amount            Decimal         @default(0) @db.Decimal(12, 2) // snapshot earned amount (pct% × price), EGP
+  createdAt         DateTime        @default(now())
+  deletedAt         DateTime? // soft-delete: cascaded when parent treatment/doctor is soft-deleted
+  deletedBy         String? // User.id who soft-deleted (snapshot for the Trash view)
+
+  @@unique([treatmentRecordId, doctorId])
+  @@index([doctorId])
+}
+
+/// A payout PAID TO a doctor against their accrued commission earnings. Earnings
+/// accrue per operation (TreatmentDoctor.amount); payouts draw them down. The
+/// doctor's outstanding balance = Σ(earnings) − Σ(payouts).
+model DoctorPayout {
+  id        String    @id @default(cuid())
+  doctorId  String
+  doctor    Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  amount    Decimal   @default(0) @db.Decimal(12, 2) // EGP paid to the doctor
+  method    String    @default("cash") // cash | card | transfer | other
+  reference String? // cheque/transfer reference number
+  note      String?
+  paidAt    DateTime  @default(now())
+  createdAt DateTime  @default(now())
+  deletedAt DateTime? // soft-delete: non-null = hidden from normal queries (Recycle Bin)
+  deletedBy String? // User.id who soft-deleted (snapshot for the Trash view)
+  branchId  String? // multi-branch: location this payout was recorded at (null = unassigned)
+  branch    Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([doctorId, paidAt])
+  @@index([branchId])
+}
+
+/// A recurring monthly clinic expense (rent, electricity, or a custom type) that
+/// reduces the clinic's net profit on the Revenue page. `amount` is the default
+/// monthly value; a specific month can be overridden via ClinicExpenseOverride.
+model ClinicExpense {
+  id        String    @id @default(cuid())
+  labelEn   String
+  labelAr   String
+  kind      String    @default("custom") // rent | electricity | custom
+  amount    Decimal   @default(0) @db.Decimal(12, 2) // default recurring monthly amount (EGP)
+  active    Boolean   @default(true)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // soft-delete: non-null = hidden from normal queries (Recycle Bin)
+  deletedBy String? // User.id who soft-deleted (snapshot for the Trash view)
+  branchId  String? // multi-branch: location this expense belongs to (null = unassigned)
+  branch    Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  overrides ClinicExpenseOverride[]
+
+  @@index([branchId])
+}
+
+/// Overrides the amount of a recurring ClinicExpense for one specific month
+/// (monthKey = "YYYY-MM"). Absent months fall back to ClinicExpense.amount.
+model ClinicExpenseOverride {
+  id        String        @id @default(cuid())
+  expenseId String
+  expense   ClinicExpense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  monthKey  String // "YYYY-MM"
+  amount    Decimal       @default(0) @db.Decimal(12, 2)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([expenseId, monthKey])
+}
+
+// ---------------------------------------------------------------------------
+// Inventory (Sprint: Enterprise Inventory — foundation)
+//
+// Perpetual inventory with lot/batch tracking. Fully additive: no existing model
+// is modified. On-hand quantity is DERIVED (Σ batch.remainingQty), never stored,
+// so it cannot drift. Every stock change is written to the append-only
+// StockMovement ledger AND applied to a batch's remainingQty inside one
+// transaction. `branchId` links each item/batch/movement to a Branch (Sprint 12
+// multi-branch foundation, ON DELETE SET NULL); existing stock was backfilled to
+// the default branch, and the column stays nullable until write-stamping lands.
+// Quantities use Decimal(12,3) (supports fractional units like ml/g); money uses
+// Decimal(12,2) EGP to match the rest of the schema.
+// ---------------------------------------------------------------------------
+
+/// A vendor items are purchased from. Owner-managed, bilingual, soft-deletable
+/// (recoverable in the Recycle Bin). `active=false` archives it from pickers
+/// without deleting history.
+model Supplier {
+  id           String    @id @default(cuid())
+  nameEn       String
+  nameAr       String
+  contactName  String?
+  phone        String?
+  email        String?
+  address      String?
+  taxId        String? // commercial/tax registration number
+  paymentTerms String? // e.g. "cash", "net30"
+  notes        String?
+  active       Boolean   @default(true)
+  sortOrder    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime? // soft-delete: non-null = hidden from normal queries (Recycle Bin)
+  deletedBy    String? // User.id who soft-deleted (snapshot for the Trash view)
+
+  batches        InventoryBatch[]
+  purchaseOrders PurchaseOrder[]
+
+  @@index([active, sortOrder])
+}
+
+/// A stock-keeping inventory item (consumable/material). On-hand is derived from
+/// its batches; this row holds only the catalog metadata + reorder policy.
+/// Soft-deletable; `active=false` archives it. `sku` is unique when present.
+model InventoryItem {
+  id           String    @id @default(cuid())
+  nameEn       String
+  nameAr       String
+  sku          String?   @unique
+  barcode      String? // scanned code (not unique: the same code may be reused across catalogs)
+  category     String? // free-text grouping (e.g. "anesthetic", "disposable")
+  unit         String    @default("piece") // piece | box | pack | ml | g ...
+  reorderLevel Decimal   @default(0) @db.Decimal(12, 3) // low-stock threshold: alert when on-hand < level
+  reorderQty   Decimal?  @db.Decimal(12, 3) // suggested quantity to reorder
+  active       Boolean   @default(true)
+  sortOrder    Int       @default(0)
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime? // soft-delete: non-null = hidden from normal queries (Recycle Bin)
+  deletedBy    String? // User.id who soft-deleted (snapshot for the Trash view)
+
+  batches   InventoryBatch[]
+  movements StockMovement[]
+  poLines   PurchaseOrderLine[]
+
+  branchId String? // multi-branch: location that stocks this item (null = unassigned)
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([active, sortOrder])
+  @@index([barcode])
+  @@index([category])
+  @@index([branchId])
+}
+
+/// A received lot/batch of an item. Powers batch/lot tracking, expiry (FEFO),
+/// and per-lot cost for valuation. `remainingQty` is decremented as stock is
+/// consumed; a depleted batch (remainingQty=0) is retained for history.
+model InventoryBatch {
+  id           String        @id @default(cuid())
+  itemId       String
+  item         InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  supplierId   String?
+  supplier     Supplier?     @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  branchId     String? // multi-branch: location that holds this lot (null = unassigned)
+  branch       Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  lotNumber    String?
+  expiryDate   DateTime? // for FEFO ordering + expiry alerts
+  unitCost     Decimal       @default(0) @db.Decimal(12, 2) // cost per unit for this lot (EGP)
+  receivedQty  Decimal       @default(0) @db.Decimal(12, 3) // original quantity received
+  remainingQty Decimal       @default(0) @db.Decimal(12, 3) // current on-hand for this lot
+  receivedAt   DateTime      @default(now())
+  notes        String?
+  createdAt    DateTime      @default(now())
+
+  movements StockMovement[]
+
+  @@index([itemId, expiryDate])
+  @@index([itemId, remainingQty])
+  @@index([expiryDate])
+  @@index([supplierId])
+  @@index([branchId])
+}
+
+/// Append-only ledger of every stock change. `quantityDelta` is SIGNED
+/// (+increase, −decrease); an item's on-hand = Σ quantityDelta (and equals
+/// Σ batch.remainingQty). Rows are never updated or deleted — corrections are
+/// posted as new (reversing) movements.
+model StockMovement {
+  id            String          @id @default(cuid())
+  itemId        String
+  item          InventoryItem   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  batchId       String?
+  batch         InventoryBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  branchId      String? // multi-branch: location this movement occurred at (null = unassigned)
+  branch        Branch?         @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  type          String // receipt | consumption | wastage | adjustment | transfer_in | transfer_out | return
+  quantityDelta Decimal         @db.Decimal(12, 3) // signed change to on-hand
+  unitCost      Decimal?        @db.Decimal(12, 2) // snapshot cost/unit at movement time
+  totalCost     Decimal?        @db.Decimal(12, 2) // snapshot |quantityDelta| × unitCost (movement valuation)
+  reason        String? // free-text reason (required by the API for wastage/adjustment)
+  referenceType String? // "PurchaseOrder" | "TreatmentRecord" | "Manual" | "Transfer"
+  referenceId   String?
+  actorId       String? // User.id who posted the movement
+  actorName     String? // snapshot of the actor's display name
+  createdAt     DateTime        @default(now())
+
+  @@index([itemId, createdAt])
+  @@index([type, createdAt])
+  @@index([batchId])
+  @@index([referenceType, referenceId])
+  @@index([branchId])
+}
+
+/// A purchase order to a supplier: a header plus line items. Submitting sends it
+/// to the supplier; receiving a line creates inventory batches (reusing the
+/// receive path, tagged referenceType="PurchaseOrder") and advances the status
+/// to partially_received / received. Soft-deletable (Recycle Bin) — trashing the
+/// PO document never touches already-received stock. Money Decimal(12,2),
+/// quantities Decimal(12,3).
+model PurchaseOrder {
+  id            String    @id @default(cuid())
+  code          String    @unique // human PO number, e.g. PO-2026-0001
+  supplierId    String?
+  supplier      Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  branchId      String? // multi-branch: location this order is for (null = unassigned)
+  branch        Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  status        String    @default("draft") // draft | submitted | partially_received | received | cancelled
+  currency      String    @default("EGP")
+  notes         String?
+  expectedAt    DateTime? // expected delivery date
+  orderedAt     DateTime? // when submitted to the supplier
+  receivedAt    DateTime? // when fully received
+  createdBy     String? // User.id who created it
+  createdByName String? // snapshot of the creator's display name
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime? // soft-delete: non-null = hidden from normal queries (Recycle Bin)
+  deletedBy     String? // User.id who soft-deleted (snapshot for the Trash view)
+
+  lines PurchaseOrderLine[]
+
+  @@index([status, createdAt])
+  @@index([supplierId])
+  @@index([branchId])
+}
+
+/// One line of a purchase order: an item, ordered quantity, unit cost, and how
+/// much has been received so far (receivedQty <= orderedQty, enforced in the
+/// service). Cascade-only child of its PO (no independent soft-delete); the item
+/// link is SET NULL so deleting a catalog item keeps the order history, with the
+/// item name snapshotted into description* at order time.
+model PurchaseOrderLine {
+  id              String         @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder  @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  itemId          String?
+  item            InventoryItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  descriptionEn   String? // snapshot of the item name at order time
+  descriptionAr   String?
+  orderedQty      Decimal        @db.Decimal(12, 3)
+  receivedQty     Decimal        @default(0) @db.Decimal(12, 3)
+  unitCost        Decimal        @default(0) @db.Decimal(12, 2)
+  sortOrder       Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([purchaseOrderId])
+  @@index([itemId])
+}
+
+/// The clinic's reusable medication library (paracetamol, amoxicillin…). A
+/// prescription line may pick from this catalog and SNAPSHOTS the name/strength/
+/// form at issue time so later catalog edits never rewrite an issued prescription.
+/// Soft-deletable (Recycle Bin); a deleted medication keeps prescription history
+/// because lines snapshot the name and the link is SET NULL.
+model Medication {
+  id                  String    @id @default(cuid())
+  nameEn              String
+  nameAr              String
+  form                String? // tablet | capsule | syrup | injection | cream | drops | …
+  strength            String? // e.g. "500 mg", "250 mg/5 ml"
+  route               String? // oral | topical | IV | IM | …
+  defaultDosage       String? // e.g. "1 tablet"
+  defaultFrequency    String? // e.g. "twice daily" / "بعد الأكل بساعة"
+  defaultDurationDays Int? // typical course length in days
+  defaultInstructions String?
+  notes               String?
+  active              Boolean   @default(true)
+  sortOrder           Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime? // soft-delete: non-null = hidden from normal queries (Recycle Bin)
+  deletedBy           String? // User.id who soft-deleted (snapshot for the Trash view)
+
+  items PrescriptionItem[]
+
+  @@index([active, sortOrder])
+}
+
+/// An electronic prescription issued to a patient (header). Patient name and the
+/// prescribing doctor's name are snapshotted so the printed document is stable
+/// even if the patient/doctor is later edited or removed. Status is `issued` or
+/// `cancelled`; soft-delete moves it to the Recycle Bin without losing history.
+model Prescription {
+  id            String    @id @default(cuid())
+  code          String    @unique // human RX number, e.g. RX-2026-0001
+  patientId     String
+  patient       Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientName   String // snapshot of the patient name at issue time
+  doctorId      String? // optional: the prescribing doctor
+  doctor        Doctor?   @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  doctorName    String? // snapshot of the doctor name at issue time
+  appointmentId String? // optional soft link to the visit (no FK; mirrors TreatmentRecord)
+  status        String    @default("issued") // issued | cancelled
+  diagnosis     String?
+  notes         String?
+  issuedAt      DateTime  @default(now())
+  createdBy     String? // User.id who created it
+  createdByName String? // snapshot of the creator's display name
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime? // soft-delete: non-null = hidden from normal queries (Recycle Bin)
+  deletedBy     String? // User.id who soft-deleted (snapshot for the Trash view)
+
+  items PrescriptionItem[]
+
+  branchId String? // multi-branch: location this prescription was issued at (null = unassigned)
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, issuedAt])
+  @@index([doctorId])
+  @@index([status, issuedAt])
+  @@index([branchId])
+}
+
+/// One medication line of a prescription. The item link is SET NULL so deleting a
+/// catalog medication keeps the prescription intact (name/strength/form are
+/// snapshotted at issue time). Cascade child of its Prescription (a permanent
+/// purge removes the lines with the document).
+model PrescriptionItem {
+  id             String       @id @default(cuid())
+  prescriptionId String
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  medicationId   String? // catalog link (null if custom or catalog entry was deleted)
+  medication     Medication?  @relation(fields: [medicationId], references: [id], onDelete: SetNull)
+  nameEn         String // snapshot of the medication name at issue time
+  nameAr         String
+  strength       String? // snapshot, e.g. "500 mg"
+  form           String? // snapshot, e.g. "tablet"
+  dosage         String? // e.g. "1 tablet"
+  frequency      String? // e.g. "3× daily"
+  durationDays   Int? // course length in days
+  quantity       String? // dispense quantity as free text, e.g. "20 tablets"
+  refills        Int          @default(0) // number of allowed repeats
+  instructions   String? // free-text directions (sig)
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([prescriptionId])
+  @@index([medicationId])
+}
+
+/// A physical clinic location (branch). Multi-branch foundation: operational and
+/// financial records (appointments, treatments, payments, payouts, expenses,
+/// inventory items/batches/movements, purchase orders, prescriptions) plus staff
+/// and doctors carry an optional `branchId` so one clinic can run several
+/// locations from a single database. Shared catalogs (patients, procedures,
+/// medications, suppliers, settings) stay clinic-wide. Soft-deletable (Recycle
+/// Bin); every `branchId` link is ON DELETE SET NULL, so removing a branch never
+/// deletes its records — they simply become unassigned.
+model Branch {
+  id        String    @id @default(cuid())
+  nameEn    String
+  nameAr    String
+  code      String    @unique // short branch code, e.g. MAIN, DT2
+  phone     String?
+  whatsappNumber String? // multi-branch: this branch's own WhatsApp contact number (display + intake routing)
+  address   String?
+  active    Boolean   @default(true)
+  sortOrder Int       @default(0)
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // soft-delete: non-null = hidden from normal queries (Recycle Bin)
+  deletedBy String? // User.id who soft-deleted (snapshot for the Trash view)
+
+  appointments     Appointment[]
+  treatmentRecords TreatmentRecord[]
+  payments         Payment[]
+  doctorPayouts    DoctorPayout[]
+  clinicExpenses   ClinicExpense[]
+  inventoryItems   InventoryItem[]
+  inventoryBatches InventoryBatch[]
+  stockMovements   StockMovement[]
+  purchaseOrders   PurchaseOrder[]
+  prescriptions    Prescription[]
+  users            User[]
+  doctors          Doctor[]
+
+  @@index([active, sortOrder])
+}

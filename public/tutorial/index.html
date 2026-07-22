@@ -1,0 +1,544 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>دليل استخدام نظام إدارة العيادة</title>
+<style>
+:root{
+  --bg:#0a0f1e;--card:#111827;--card2:#1a2235;--border:#1e2d45;
+  --text:#f0f6ff;--muted:#64748b;--blue:#3b82f6;--teal:#0ea5e9;
+  --green:#22c55e;--amber:#f59e0b;--rose:#f43f5e;
+  --primary:#38bdf8;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',Tahoma,'Cairo',Arial,sans-serif;height:100vh;overflow:hidden;direction:rtl;}
+#app{display:flex;flex-direction:column;height:100vh;}
+
+/* Progress bar */
+#prog-bar{height:3px;background:var(--border);flex-shrink:0;}
+#prog-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--teal));transition:width .4s ease;width:0%;}
+
+#main{flex:1;display:flex;overflow:hidden;}
+
+/* ───── Sidebar ───── */
+#sidebar{width:230px;flex-shrink:0;background:var(--card);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+#sb-head{padding:14px 12px 10px;border-bottom:1px solid var(--border);}
+#sb-head h2{font-size:12.5px;font-weight:900;color:var(--primary);}
+#sb-head p{font-size:9.5px;color:var(--muted);margin-top:3px;}
+#nav-list{flex:1;overflow-y:auto;padding:6px 5px;}
+#nav-list::-webkit-scrollbar{width:4px;}
+#nav-list::-webkit-scrollbar-track{background:transparent;}
+#nav-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.nav-sep{font-size:9px;color:var(--muted);padding:8px 8px 3px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;}
+.nav-btn{display:flex;align-items:center;gap:8px;width:100%;padding:7px 9px;border-radius:8px;border:none;background:none;color:var(--muted);font-size:11px;font-family:inherit;cursor:pointer;text-align:right;transition:all .15s;direction:rtl;}
+.nav-btn:hover{background:rgba(56,189,248,.07);color:var(--text);}
+.nav-btn.active{background:rgba(56,189,248,.13);color:var(--primary);font-weight:700;}
+.nb-num{width:18px;height:18px;border-radius:5px;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;}
+.nav-btn.active .nb-num{background:var(--primary);color:#000;}
+.nb-label{flex:1;text-align:right;}
+
+/* ───── Content ───── */
+#content{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+
+/* slide header */
+.sh{padding:12px 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:10px;}
+.sh-badge{padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(56,189,248,.15);color:var(--primary);}
+.sh-title{font-size:17px;font-weight:900;flex:1;}
+.sh-counter{font-size:10px;color:var(--muted);}
+
+/* main slide area */
+.sc-wrap{flex:1;display:flex;gap:12px;padding:12px 16px;overflow:hidden;min-height:0;}
+
+/* video player */
+.vid-box{flex:1;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#000;min-width:0;position:relative;display:flex;align-items:center;justify-content:center;}
+.vid-box video{width:100%;height:100%;object-fit:contain;display:block;}
+.vid-placeholder{color:var(--muted);font-size:13px;text-align:center;padding:20px;}
+
+/* instructions panel */
+.instr-panel{width:220px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;overflow-y:auto;}
+.instr-panel::-webkit-scrollbar{width:4px;}
+.instr-panel::-webkit-scrollbar-thumb{background:var(--border);}
+.step-card{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:10px 11px;}
+.step-card-title{font-size:11px;font-weight:800;margin-bottom:5px;display:flex;align-items:center;gap:6px;color:var(--primary);}
+.step-card-title svg{flex-shrink:0;}
+.step-list{list-style:none;display:flex;flex-direction:column;gap:6px;}
+.step-list li{font-size:10.5px;line-height:1.55;color:var(--text);display:flex;gap:6px;align-items:flex-start;}
+.step-list li::before{content:'';display:block;width:5px;height:5px;border-radius:50%;background:var(--primary);margin-top:5px;flex-shrink:0;}
+.step-list li.highlight::before{background:var(--green);box-shadow:0 0 6px var(--green);}
+.step-list li.important{color:var(--amber);}
+.step-list li.important::before{background:var(--amber);}
+.key-badge{display:inline-block;background:rgba(34,197,94,.15);color:var(--green);border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;margin-top:2px;}
+
+/* audio bar */
+#audio-bar{height:54px;flex-shrink:0;background:var(--card);border-top:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 18px;}
+#play-btn{width:36px;height:36px;border-radius:50%;background:var(--primary);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#000;flex-shrink:0;transition:all .15s;}
+#play-btn:hover{background:#7dd3fc;transform:scale(1.05);}
+#play-btn svg{width:14px;height:14px;}
+#audio-track{flex:1;display:flex;flex-direction:column;gap:4px;}
+#track-label{font-size:10.5px;font-weight:700;color:var(--text);}
+#timeline{position:relative;height:4px;background:var(--border);border-radius:2px;cursor:pointer;}
+#timeline-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--teal));border-radius:2px;width:0%;transition:width .2s linear;}
+#time-display{font-size:9.5px;color:var(--muted);font-variant-numeric:tabular-nums;}
+#nav-btns{display:flex;gap:6px;}
+.nb-arrow{background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:5px 11px;font-size:11px;cursor:pointer;color:var(--text);transition:all .15s;font-family:inherit;}
+.nb-arrow:hover{border-color:var(--primary);color:var(--primary);}
+
+/* slide transitions */
+.slide{display:none;flex-direction:column;flex:1;overflow:hidden;}
+.slide.active{display:flex;}
+
+/* intro slide */
+.intro-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:30px;}
+.intro-logo{width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,var(--primary),var(--teal));display:flex;align-items:center;justify-content:center;font-size:36px;}
+.intro-title{font-size:26px;font-weight:900;background:linear-gradient(135deg,var(--primary),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.intro-sub{font-size:13px;color:var(--muted);line-height:1.7;max-width:380px;}
+.intro-start{padding:12px 32px;background:linear-gradient(135deg,var(--primary),var(--teal));border:none;border-radius:12px;color:#000;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s;}
+.intro-start:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(56,189,248,.3);}
+
+/* typing animation */
+@keyframes blink{50%{opacity:0;}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="prog-bar"><div id="prog-fill"></div></div>
+  <div id="main">
+
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div id="sb-head">
+        <h2>🦷 دليل الاستخدام</h2>
+        <p>لوحة تحكم العيادة</p>
+      </div>
+      <div id="nav-list"></div>
+    </aside>
+
+    <!-- Content -->
+    <div id="content">
+      <div id="slides-container" style="flex:1;display:flex;flex-direction:column;overflow:hidden;"></div>
+      <!-- Audio bar -->
+      <div id="audio-bar">
+        <button id="play-btn" onclick="toggleAudio()">
+          <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <div id="audio-track">
+          <div id="track-label">جاري التحميل...</div>
+          <div id="timeline" onclick="seekAudio(event)">
+            <div id="timeline-fill"></div>
+          </div>
+        </div>
+        <div id="time-display">0:00 / 0:00</div>
+        <div id="nav-btns">
+          <button class="nb-arrow" onclick="prevSlide()">→</button>
+          <button class="nb-arrow" onclick="nextSlide()">←</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<audio id="audio-el" preload="auto"></audio>
+
+<script>
+const SLIDES = [
+  {
+    id: 'intro',
+    label: 'مقدمة',
+    audio: '/tutorial/00_intro.mp3',
+    type: 'intro',
+  },
+  {
+    id: 'overview',
+    label: 'الرئيسية',
+    audio: '/tutorial/01_overview.mp3',
+    video: '/tutorial/videos/01_overview.webm',
+    title: 'لوحة الرئيسية — نظرة عامة',
+    desc: 'إحصائيات اليوم، المواعيد، والإجراءات السريعة',
+    steps: [
+      { text: 'تعرض بطاقات الإحصاء: مواعيد اليوم، المرضى، والإيرادات' },
+      { text: 'اضغط "إضافة موعد" لإنشاء موعد جديد بسرعة', highlight: true },
+      { text: 'اضغط "إضافة عملية" لتسجيل عملية جديدة', highlight: true },
+      { text: 'جدول اليوم يظهر في الوسط مع المواعيد المؤكدة' },
+      { text: 'المطالبات الجديدة من الموقع تظهر في اليمين' },
+    ],
+  },
+  {
+    id: 'add_patient',
+    label: 'إضافة عميل',
+    audio: '/tutorial/02_add_patient.mp3',
+    video: '/tutorial/videos/02_add_patient.webm',
+    title: 'كيفية إضافة عميل جديد',
+    desc: 'خطوات تسجيل مريض جديد في النظام',
+    steps: [
+      { text: 'اذهب إلى قسم "العملاء" من القائمة الجانبية' },
+      { text: 'اضغط زر "إضافة عميل" في أعلى يمين الصفحة', highlight: true },
+      { text: 'أدخل الاسم الكامل ورقم الهاتف (إلزامي)', important: true },
+      { text: 'أضف البريد الإلكتروني والجنس اختيارياً' },
+      { text: 'في قسم التاريخ الطبي: أدخل الحساسيات والأمراض المزمنة', highlight: true },
+      { text: 'اضغط "حفظ" لتسجيل العميل في قاعدة البيانات' },
+    ],
+  },
+  {
+    id: 'add_doctor',
+    label: 'إضافة طبيب',
+    audio: '/tutorial/03_add_doctor.mp3',
+    video: '/tutorial/videos/03_add_doctor.webm',
+    title: 'إضافة طبيب مع تحديد نسبة العمولة',
+    desc: 'تسجيل طبيب جديد وضبط نسبة حصته',
+    steps: [
+      { text: 'اذهب إلى قسم "الأطباء" من القائمة الجانبية' },
+      { text: 'اضغط "إضافة طبيب"' },
+      { text: 'أدخل الاسم بالعربي والإنجليزي، الهاتف، والتخصص' },
+      { text: '⭐ حقل "نسبة العمولة" هو الأهم — أدخل النسبة المئوية للطبيب', important: true },
+      { text: 'مثال: ٤٠٪ = الطبيب يأخذ ٤٠٪ والعيادة تأخذ ٦٠٪ من كل عملية', highlight: true },
+      { text: 'يمكن تعديل النسبة في أي وقت من ملف الطبيب' },
+    ],
+    keyBadge: 'نسبة العمولة تحدد توزيع الأرباح',
+  },
+  {
+    id: 'add_operation',
+    label: 'إضافة عملية',
+    audio: '/tutorial/04_add_operation.mp3',
+    video: '/tutorial/videos/04_add_operation.webm',
+    title: 'تسجيل عملية جديدة',
+    desc: 'إضافة عملية وربطها بمريض وطبيب',
+    steps: [
+      { text: 'اذهب إلى قسم "العمليات"' },
+      { text: 'اضغط "إضافة عملية"' },
+      { text: 'ابحث عن المريض واختره من القائمة' },
+      { text: 'حدد نوع الإجراء والتكلفة' },
+      { text: 'اختر الطبيب المسؤول عن العملية', highlight: true },
+      { text: 'النظام يحسب تلقائياً حصة الطبيب وأرباح العيادة', highlight: true },
+      { text: 'اضغط "حفظ" لتسجيل العملية وإضافتها لتقارير الأرباح' },
+    ],
+  },
+  {
+    id: 'appointments',
+    label: 'المواعيد',
+    audio: '/tutorial/05_appointments.mp3',
+    video: '/tutorial/videos/05_appointments.webm',
+    title: 'إدارة المواعيد اليومية',
+    desc: 'جدول المواعيد الأسبوعي وإدارة الأوقات',
+    steps: [
+      { text: 'الجدول يعرض المواعيد لكل يوم من أيام الأسبوع' },
+      { text: 'الخانات الخضراء = وقت متاح، الزرقاء = موعد محجوز' },
+      { text: 'انقر على موعد لعرض تفاصيله أو تعديله' },
+      { text: 'يمكن إضافة موعد بالضغط على خانة فارغة في الجدول', highlight: true },
+      { text: 'المواعيد المؤكدة من الموقع أو واتساب تظهر هنا تلقائياً' },
+    ],
+  },
+  {
+    id: 'analytics',
+    label: 'التحليلات',
+    audio: '/tutorial/06_analytics.mp3',
+    video: '/tutorial/videos/06_analytics.webm',
+    title: 'تحليلات أداء العيادة',
+    desc: 'مخططات ومؤشرات الأداء التفصيلية',
+    steps: [
+      { text: 'مخطط المرضى الجدد مقابل العائدين شهرياً' },
+      { text: 'أكثر أنواع العمليات طلباً' },
+      { text: 'مخطط الإيرادات الشهرية خلال العام' },
+      { text: 'يمكن تصفية البيانات حسب الفترة الزمنية', highlight: true },
+    ],
+  },
+  {
+    id: 'revenue',
+    label: 'الإيرادات',
+    audio: '/tutorial/07_revenue.mp3',
+    video: '/tutorial/videos/07_revenue.webm',
+    title: 'تقارير الإيرادات',
+    desc: 'متابعة المدفوعات والأرباح',
+    steps: [
+      { text: 'يعرض إجمالي الإيرادات للفترة المحددة' },
+      { text: 'تفصيل المدفوعات لكل مريض' },
+      { text: 'فلترة حسب الشهر أو الفترة المخصصة', highlight: true },
+      { text: 'يمكن تصدير التقرير لـ Excel' },
+    ],
+  },
+  {
+    id: 'earnings',
+    label: 'الأرباح',
+    audio: '/tutorial/08_earnings.mp3',
+    video: '/tutorial/videos/08_earnings.webm',
+    title: 'أرباح الأطباء والعيادة',
+    desc: 'توزيع الأرباح وتسوية حسابات الأطباء',
+    steps: [
+      { text: 'بطاقات ملخص: إجمالي الإيرادات، أرباح الأطباء، أرباح العيادة' },
+      { text: 'جدول بكل طبيب: عدد عملياته، إيراداته، واستحقاقاته', highlight: true },
+      { text: 'اضغط على طبيب لعرض تفاصيل عملياته' },
+      { text: 'زر "تسجيل دفع" لتسوية مستحقات الطبيب', highlight: true, important: true },
+      { text: 'يتتبع النظام المبالغ المدفوعة والمعلقة لكل طبيب' },
+    ],
+    keyBadge: 'يحتسب تلقائياً من نسبة عمولة كل طبيب',
+  },
+  {
+    id: 'bookings',
+    label: 'الحجوزات',
+    audio: '/tutorial/09_bookings.mp3',
+    video: '/tutorial/videos/09_bookings.webm',
+    title: 'طلبات الحجز الإلكتروني',
+    desc: 'مراجعة وقبول الحجوزات من الموقع وواتساب',
+    steps: [
+      { text: 'تعرض الطلبات الجديدة من الموقع الإلكتروني' },
+      { text: 'وطلبات الحجز عبر واتساب بوت' },
+      { text: 'اضغط "تأكيد" لقبول الحجز وإرسال رسالة للمريض', highlight: true },
+      { text: 'اضغط "رفض" لإلغاء الطلب مع إشعار المريض', important: true },
+      { text: 'الحجوزات المؤكدة تضاف تلقائياً لجدول المواعيد' },
+    ],
+  },
+  {
+    id: 'patients',
+    label: 'العملاء',
+    audio: '/tutorial/10_patients.mp3',
+    video: '/tutorial/videos/10_patients.webm',
+    title: 'ملفات العملاء',
+    desc: 'سجلات المرضى وتاريخهم الطبي',
+    steps: [
+      { text: 'قائمة جميع المرضى مع البحث الفوري' },
+      { text: 'انقر على مريض لعرض ملفه الكامل', highlight: true },
+      { text: 'الملف يحتوي: البيانات الشخصية، التاريخ الطبي، سجل الجلسات' },
+      { text: 'المبلغ المستحق يظهر بالأحمر، المدفوع بالأخضر' },
+      { text: 'يمكن تعديل بيانات المريض أو إضافة ملاحظات طبية جديدة' },
+    ],
+  },
+  {
+    id: 'doctors',
+    label: 'الأطباء',
+    audio: '/tutorial/11_doctors.mp3',
+    video: '/tutorial/videos/11_doctors.webm',
+    title: 'إدارة الأطباء',
+    desc: 'بيانات الأطباء ونسب العمولة',
+    steps: [
+      { text: 'قائمة كل الأطباء المسجلين في العيادة' },
+      { text: 'اضغط "تعديل" لفتح ملف الطبيب', highlight: true },
+      { text: '⭐ عدّل "نسبة العمولة" لتغيير توزيع أرباحه', important: true },
+      { text: 'يمكن تفعيل أو إيقاف تشغيل الطبيب مؤقتاً' },
+      { text: 'كل تعديل في النسبة يطبق على العمليات القادمة فقط' },
+    ],
+    keyBadge: 'نسبة العمولة قابلة للتعديل في أي وقت',
+  },
+  {
+    id: 'offers',
+    label: 'العروض',
+    audio: '/tutorial/12_offers.mp3',
+    video: '/tutorial/videos/12_offers.webm',
+    title: 'إدارة العروض والخصومات',
+    desc: 'إنشاء عروض ترويجية تظهر في الموقع',
+    steps: [
+      { text: 'اضغط "إضافة عرض" لإنشاء عرض جديد' },
+      { text: 'أدخل اسم العرض ووصفه وقيمة الخصم' },
+      { text: 'العروض النشطة تظهر تلقائياً في الموقع', highlight: true },
+      { text: 'يمكن تحديد تاريخ انتهاء للعرض' },
+      { text: 'إيقاف تشغيل العرض يخفيه من الموقع فوراً' },
+    ],
+  },
+  {
+    id: 'editor',
+    label: 'محرر الموقع',
+    audio: '/tutorial/13_editor.mp3',
+    video: '/tutorial/videos/13_editor.webm',
+    title: 'محرر الموقع الإلكتروني',
+    desc: 'تعديل محتوى الموقع بدون برمجة',
+    steps: [
+      { text: 'يمكن تعديل اسم العيادة والعنوان والوصف' },
+      { text: 'رفع صورة جديدة للطبيب أو الشعار', highlight: true },
+      { text: 'تعديل أرقام التواصل وروابط السوشيال ميديا' },
+      { text: 'التغييرات تظهر على الموقع مباشرة بعد الحفظ', highlight: true },
+    ],
+  },
+  {
+    id: 'settings',
+    label: 'الإعدادات',
+    audio: '/tutorial/14_settings.mp3',
+    video: '/tutorial/videos/14_settings.webm',
+    title: 'إعدادات العيادة',
+    desc: 'ضبط ساعات العمل والإعدادات الأساسية',
+    steps: [
+      { text: 'ضبط مواعيد العمل اليومية لكل يوم في الأسبوع' },
+      { text: 'تحديد مدة الموعد الافتراضية (٣٠ أو ٦٠ دقيقة)' },
+      { text: 'إعداد رسائل واتساب التلقائية للتأكيد والتذكير', highlight: true },
+      { text: 'تغيير كلمة مرور لوحة التحكم', important: true },
+      { text: 'إعدادات اللغة والعملة' },
+    ],
+  },
+  {
+    id: 'messages',
+    label: 'الرسائل والتذكيرات',
+    audio: '/tutorial/15_messages.mp3',
+    video: '/tutorial/videos/15_messages.webm',
+    title: 'رسائل العملاء والتذكيرات',
+    desc: 'التواصل المباشر مع المرضى',
+    steps: [
+      { text: 'يعرض محادثات واتساب الواردة من المرضى' },
+      { text: 'يمكن الرد مباشرة من لوحة التحكم', highlight: true },
+      { text: 'التذكيرات التلقائية تُرسل قبل الموعد بساعة' },
+      { text: 'يمكن إرسال تذكير يدوي لأي مريض', highlight: true },
+      { text: 'تتبع حالة التذكير: مُرسل، مقروء، مرفوض' },
+    ],
+  },
+];
+
+let current = 0;
+let audioEl = document.getElementById('audio-el');
+let vidEl = null;
+const slidesC = document.getElementById('slides-container');
+
+function buildNav() {
+  const nav = document.getElementById('nav-list');
+  nav.innerHTML = '';
+  SLIDES.forEach((s, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'nav-btn' + (i === 0 ? ' active' : '');
+    btn.id = `nb-${i}`;
+    btn.onclick = () => goTo(i);
+    btn.innerHTML = `
+      <span class="nb-num">${i === 0 ? '⌂' : i}</span>
+      <span class="nb-label">${s.label}</span>
+    `;
+    nav.appendChild(btn);
+  });
+}
+
+function buildSlides() {
+  slidesC.innerHTML = '';
+  SLIDES.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'slide' + (i === 0 ? ' active' : '');
+    div.id = `slide-${i}`;
+
+    if (s.type === 'intro') {
+      div.innerHTML = `
+        <div class="intro-center">
+          <div class="intro-logo">🦷</div>
+          <h1 class="intro-title">دليل نظام إدارة العيادة</h1>
+          <p class="intro-sub">هذا الدليل يشرح كل قسم من أقسام لوحة التحكم بالتفصيل، ويوضح كيفية استخدام كل وظيفة خطوة بخطوة عبر فيديوهات حقيقية من النظام.</p>
+          <button class="intro-start" onclick="goTo(1)">ابدأ الدليل ←</button>
+        </div>
+      `;
+    } else {
+      const stepsHtml = (s.steps || []).map(st => {
+        const cls = st.important ? 'important' : st.highlight ? 'highlight' : '';
+        return `<li class="${cls}">${st.text}</li>`;
+      }).join('');
+      const keyHtml = s.keyBadge ? `<div class="key-badge">🔑 ${s.keyBadge}</div>` : '';
+
+      div.innerHTML = `
+        <div class="sh">
+          <span class="sh-badge">قسم ${i}</span>
+          <div>
+            <div class="sh-title">${s.title}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${s.desc}</div>
+          </div>
+          <span class="sh-counter">${i} / ${SLIDES.length - 1}</span>
+        </div>
+        <div class="sc-wrap">
+          <div class="vid-box" id="vid-box-${i}">
+            ${s.video
+              ? `<video id="vid-${i}" src="${s.video}" playsinline muted loop preload="metadata" style="width:100%;height:100%;object-fit:contain;"></video>`
+              : `<div class="vid-placeholder">📹 جاري التحميل...</div>`
+            }
+          </div>
+          <div class="instr-panel">
+            <div class="step-card">
+              <div class="step-card-title">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                خطوات الاستخدام
+              </div>
+              <ul class="step-list">${stepsHtml}</ul>
+              ${keyHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    slidesC.appendChild(div);
+  });
+}
+
+function goTo(idx) {
+  if (idx < 0 || idx >= SLIDES.length) return;
+
+  // Pause current video
+  if (vidEl) { vidEl.pause(); vidEl = null; }
+
+  // Hide old slide
+  document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+  current = idx;
+  const slide = document.getElementById(`slide-${idx}`);
+  if (slide) slide.classList.add('active');
+  const nb = document.getElementById(`nb-${idx}`);
+  if (nb) nb.classList.add('active');
+
+  // Play video for this slide
+  const vid = document.getElementById(`vid-${idx}`);
+  if (vid) {
+    vidEl = vid;
+    vid.play().catch(() => {});
+  }
+
+  // Load audio
+  const s = SLIDES[idx];
+  if (s.audio) {
+    audioEl.src = s.audio;
+    audioEl.load();
+    document.getElementById('track-label').textContent = s.label;
+  }
+
+  // Progress bar
+  document.getElementById('prog-fill').style.width = ((idx / (SLIDES.length - 1)) * 100) + '%';
+
+  // Scroll nav button into view
+  if (nb) nb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function toggleAudio() {
+  if (audioEl.paused) {
+    audioEl.play().catch(() => {});
+    document.getElementById('play-icon').innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+  } else {
+    audioEl.pause();
+    document.getElementById('play-icon').innerHTML = '<path d="M8 5v14l11-7z"/>';
+  }
+}
+
+function seekAudio(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const ratio = (e.clientX - rect.left) / rect.width;
+  if (audioEl.duration) audioEl.currentTime = ratio * audioEl.duration;
+}
+
+function nextSlide() { goTo(current + 1); }
+function prevSlide() { goTo(current - 1); }
+
+// Audio events
+audioEl.addEventListener('timeupdate', () => {
+  if (!audioEl.duration) return;
+  const pct = (audioEl.currentTime / audioEl.duration) * 100;
+  document.getElementById('timeline-fill').style.width = pct + '%';
+  const fmt = t => `${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+  document.getElementById('time-display').textContent = `${fmt(audioEl.currentTime)} / ${fmt(audioEl.duration)}`;
+});
+audioEl.addEventListener('ended', () => {
+  document.getElementById('play-icon').innerHTML = '<path d="M8 5v14l11-7z"/>';
+  // Auto-advance after 1.5s
+  setTimeout(() => nextSlide(), 1500);
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') nextSlide();
+  if (e.key === 'ArrowRight') prevSlide();
+  if (e.key === ' ') { e.preventDefault(); toggleAudio(); }
+});
+
+// Init
+buildNav();
+buildSlides();
+goTo(0);
+</script>
+</body>
+</html>

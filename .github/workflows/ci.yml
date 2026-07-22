@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    # Real PostgreSQL so `prisma migrate deploy` exercises the production
+    # dialect (NUMERIC money columns, CHECK constraints, indexes). A SQLite URL
+    # here would silently skip every Postgres-only migration.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cliniva_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # CI-only throwaway values so build/migrate/tests can run without real secrets.
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/cliniva_test?schema=public"
+      AUTH_SECRET: "ci-test-secret-not-for-production"
+      APP_URL: "http://localhost:3000"
+      WHATSAPP_PROVIDER: "mock"
+      # Seed a known doctor account so the e2e booking-flow login succeeds
+      # (matches tests/e2e/booking-flow.spec.ts). Without SEED_DOCTOR_PASSWORD the
+      # hardened seed generates a random password (SEC-03), so the test's
+      # hardcoded credentials would 401. CI-only throwaway credentials.
+      SEED_DOCTOR_EMAIL: "doctor@bdic.clinic"
+      SEED_DOCTOR_PASSWORD: "bdic12345"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        # The committed lockfile is missing some optional transitive entries, so
+        # `npm ci` fails on Linux ("lock file not in sync"). `npm install`
+        # reconciles it and installs the optional native deps `next build` needs.
+        run: npm install --no-audit --no-fund
+
+      - name: Upload reconciled lockfile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-lock
+          path: package-lock.json
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Typecheck
+        run: npm run typecheck --if-present
+
+      - name: Prepare database
+        run: |
+          npx prisma migrate deploy
+          node prisma/seed.mjs
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E tests
+        run: npx playwright test

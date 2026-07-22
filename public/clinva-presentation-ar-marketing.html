@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clinva — عرض تسويقي</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;700;800&family=Manrope:wght@500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f8f6f1;
+        --panel: #ffffff;
+        --line: #e6dcc5;
+        --ink: #2f2a20;
+        --muted: #6f6656;
+        --gold: #c9a34b;
+        --gold-soft: #f3ead5;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Alexandria", "Segoe UI", Arial, sans-serif;
+      }
+      .slide {
+        width: min(94vw, 860px);
+        margin: 26px auto;
+        padding: 26px;
+        border: 1px solid var(--line);
+        border-radius: 26px;
+        background: var(--panel);
+        break-inside: avoid;
+        box-shadow: 0 12px 32px rgba(84, 66, 30, 0.08);
+      }
+      .top-line {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        border: 1px solid #dbcda8;
+        border-radius: 999px;
+        background: #fffaf0;
+        font-size: 14px;
+        color: #5f5134;
+      }
+      .brand img { width: 122px; }
+      .chip {
+        font-family: "Manrope", "Alexandria", sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 8px 12px;
+        border: 1px solid #d9be82;
+        border-radius: 999px;
+        color: #8f6a1f;
+        background: var(--gold-soft);
+      }
+      h1, h2, h3 { margin: 0; }
+      .hero-title {
+        font-size: 58px;
+        line-height: 1.05;
+        font-weight: 800;
+      }
+      .gold { color: var(--gold); }
+      .lead {
+        margin-top: 14px;
+        font-size: 22px;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+      .metrics {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+      .metric {
+        border: 1px solid #e5d8bc;
+        border-radius: 16px;
+        padding: 14px;
+        background: #fffaf2;
+      }
+      .metric .n {
+        font-family: "Manrope", sans-serif;
+        font-size: 34px;
+        font-weight: 800;
+        color: var(--gold);
+      }
+      .metric .t {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .shot {
+        width: 100%;
+        border-radius: 18px;
+        border: 1px solid #dccda9;
+        box-shadow: 0 12px 30px rgba(94, 76, 40, 0.16);
+      }
+      .hero-shot {
+        margin-top: 20px;
+        width: 100%;
+        max-height: 560px;
+        object-fit: cover;
+      }
+      .section-title {
+        font-size: 44px;
+        line-height: 1.15;
+        margin-bottom: 12px;
+      }
+      .section-sub {
+        color: var(--muted);
+        font-size: 20px;
+        line-height: 1.5;
+        margin-bottom: 18px;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .feature {
+        border: 1px solid #e7dbc2;
+        border-radius: 16px;
+        background: #fffdf8;
+        padding: 14px;
+      }
+      .feature h3 {
+        font-size: 24px;
+        margin-bottom: 8px;
+      }
+      .feature p {
+        margin: 0 0 12px;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.6;
+      }
+      .feature .shot {
+        max-height: 360px;
+        object-fit: cover;
+      }
+      .big-shot {
+        border: 1px solid #e1d3b3;
+        border-radius: 20px;
+        padding: 10px;
+        background: #fffaf1;
+      }
+      .big-shot .shot {
+        max-height: 620px;
+        object-fit: cover;
+      }
+      .closing {
+        text-align: center;
+        padding: 38px 22px;
+      }
+      .closing h2 {
+        font-size: 52px;
+        line-height: 1.2;
+      }
+      .closing p {
+        margin: 14px auto 0;
+        max-width: 900px;
+        color: var(--muted);
+        font-size: 23px;
+        line-height: 1.7;
+      }
+      @media print {
+        @page { size: A4 portrait; margin: 14mm; }
+        body { background: #ffffff; }
+        .slide {
+          width: auto;
+          margin: 0 0 10mm;
+          box-shadow: none;
+          border-radius: 14px;
+          page-break-inside: avoid;
+          page-break-after: always;
+        }
+        .slide:last-child { page-break-after: auto; }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="slide">
+      <div class="top-line">
+        <span class="chip">2026 Marketing Deck</span>
+        <span class="brand"><img src="/clinva-wordmark.png" alt="Clinva" /> منظومة إدارة عيادات الأسنان</span>
+      </div>
+      <h1 class="hero-title">ده مش برنامج عيادة عادي… <span class="gold">ده محرك تشغيل كامل</span> للـ Dental Business</h1>
+      <p class="lead">
+        كل شيء في مكان واحد: حجوزات، واتساب، تشغيل يومي، ملفات المرضى، الإيراد، أرباح الأطباء، وتحكم لحظي في المخزون.
+      </p>
+      <div class="metrics">
+        <div class="metric">
+          <div class="n">متكامل</div>
+          <div class="t">تشغيل كامل للعيادة من أول الحجز لحد التقارير</div>
+        </div>
+        <div class="metric">
+          <div class="n">Live</div>
+          <div class="t">متابعة مباشرة للحجوزات، الرسائل، والجلسات اليومية</div>
+        </div>
+        <div class="metric">
+          <div class="n">AI + WA</div>
+          <div class="t">بوت واتساب ذكي للرد والحجز والمتابعة التلقائية</div>
+        </div>
+      </div>
+      <img class="shot hero-shot" src="/tutorial/screenshots/01_overview.png" alt="لوحة التحكم الرئيسية" />
+    </section>
+
+    <section class="slide">
+      <div class="top-line">
+        <span class="chip">Experience</span>
+        <span class="brand">واجهة تنفيذية قوية للطبيب والإدارة</span>
+      </div>
+      <h2 class="section-title">Dashboard مصمم للسرعة والقرارات</h2>
+      <p class="section-sub">
+        في ثواني تقدر تشوف اليوم كامل: الضغط، المواعيد، الحالات الجديدة، التفاعل، والأداء المالي — بدون تعقيد.
+      </p>
+      <div class="big-shot">
+        <img class="shot" src="/tutorial/screenshots/09_calendar.png" alt="التقويم والمواعيد" />
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="top-line">
+        <span class="chip">New Updates</span>
+        <span class="brand">آخر الإضافات الجوهرية</span>
+      </div>
+      <h2 class="section-title">تحديثات قوية ترفع كفاءة التشغيل</h2>
+      <p class="section-sub">نسخة حديثة تشمل مخزون + تحليلات تشغيل + متابعة مالية أدق.</p>
+      <div class="grid-2">
+        <article class="feature">
+          <h3>المخزون واستهلاك المواد</h3>
+          <p>قياس استهلاك فعلي للمواد وربطه بالأداء لتقليل الهدر وتحسين قرار الشراء.</p>
+          <img class="shot" src="/tutorial/screenshots/02_analytics.png" alt="تحليلات واستهلاك المخزون" />
+        </article>
+        <article class="feature">
+          <h3>واتساب كقناة مبيعات وحجز</h3>
+          <p>ربط رقم العيادة مع البوت لاستقبال الرسائل والحجوزات والردود بشكل تلقائي.</p>
+          <img class="shot" src="/tutorial/screenshots/06_whatsapp.png" alt="واتساب" />
+        </article>
+        <article class="feature">
+          <h3>ملف مريض مالي + علاجي</h3>
+          <p>العمليات، المدفوعات، الرصيد، والمرفقات في Profile واحد منظم وواضح.</p>
+          <img class="shot" src="/tutorial/screenshots/10_patients.png" alt="ملفات المرضى" />
+        </article>
+        <article class="feature">
+          <h3>أرباح وإيراد على مستوى القرار</h3>
+          <p>فصل بين إيراد العيادة وصافي الربح وأرباح الأطباء لتحسين الإدارة اليومية.</p>
+          <img class="shot" src="/tutorial/screenshots/04_earnings.png" alt="الأرباح" />
+        </article>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="top-line">
+        <span class="chip">Competitive Edge</span>
+        <span class="brand">ليه Clinva هيكسب المنافسة؟</span>
+      </div>
+      <h2 class="section-title">منصة تسويق + تشغيل + نمو</h2>
+      <p class="section-sub">
+        مش مجرد تسجيل مواعيد. Clinva بيحوّل العيادة لنظام نمو: جذب عميل، تحويله، متابعته، وتحويل البيانات لقرارات تربح.
+      </p>
+      <div class="big-shot">
+        <img class="shot" src="/tutorial/screenshots/03_revenue.png" alt="الإيراد والنمو" />
+      </div>
+    </section>
+
+    <section class="slide closing">
+      <div class="top-line">
+        <span class="chip">Ready To Scale</span>
+        <span class="brand">Clinva</span>
+      </div>
+      <h2>Clinva مش Software… <span class="gold">ده نظام تشغيل للعيادة الحديثة</span></h2>
+      <p>
+        لو هدفك انبهار العميل من أول دقيقة + إدارة احترافية على مستوى يومي + رؤية مالية واضحة،
+        فـ Clinva هو العرض اللي بيتباع بسهولة لأنه واضح، قوي، وجاهز للتوسع.
+      </p>
+      <img class="shot hero-shot" src="/tutorial/screenshots/15_settings.png" alt="الإعدادات والتوسعة" />
+    </section>
+  </body>
+</html>

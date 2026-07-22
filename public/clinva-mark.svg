@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Clinva">
+  <defs>
+    <linearGradient id="clinvaGold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#c9a24b"/>
+      <stop offset="1" stop-color="#a87f2b"/>
+    </linearGradient>
+  </defs>
+  <!-- rounded app-icon tile -->
+  <rect width="64" height="64" rx="16" fill="url(#clinvaGold)"/>
+  <!-- chat bubble (reads as a soft C) with a tail -->
+  <path d="M32 15.5c-9.7 0-17.6 6.9-17.6 15.4 0 4.8 2.5 9 6.4 11.9v6.4c0 1.2 1.3 1.9 2.3 1.2l6.2-4.1c.9.1 1.8.2 2.7.2 9.7 0 17.6-6.9 17.6-15.6S41.7 15.5 32 15.5z" fill="#fff"/>
+  <!-- medical plus inside -->
+  <path d="M29.4 23.6h5.2v14.8h-5.2z" fill="url(#clinvaGold)"/>
+  <path d="M24.6 28.4h14.8v5.2H24.6z" fill="url(#clinvaGold)"/>
+</svg>

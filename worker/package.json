@@ -1,0 +1,14 @@
+{
+  "name": "boss-dental-wa-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone WhatsApp booking-bot worker for THE BOSS Dental Clinic.",
+  "scripts": {
+    "start": "node whatsapp-web.mjs"
+  },
+  "dependencies": {
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.26.0"
+  }
+}
