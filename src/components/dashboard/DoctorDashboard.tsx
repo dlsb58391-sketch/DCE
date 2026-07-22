@@ -14,7 +14,6 @@ import { OffersManager } from "./OffersManager";
 import { SiteEditor } from "./SiteEditor";
 import { OnlineBookings } from "./OnlineBookings";
 import { WhatsAppLink } from "./WhatsAppLink";
-import { OutreachManager } from "./OutreachManager";
 import { ClientMessages } from "./ClientMessages";
 import { SettingsSection } from "./SettingsSection";
 import { OperationsManager } from "./OperationsManager";
@@ -89,7 +88,6 @@ const navItems = [
   { id: "earnings", label: { en: "Earnings", ar: "الأرباح" }, icon: "M3 3v18h18M7 14l4-4 3 3 5-6" },
   { id: "bookings", label: { en: "Bookings", ar: "الحجوزات" }, icon: "M4 5h16v10H7l-3 3V5Z" },
   { id: "whatsapp", label: { en: "WhatsApp", ar: "واتساب" }, icon: "M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Z" },
-  { id: "outreach", label: { en: "Outreach", ar: "التسويق" }, icon: "M3 11l18-8-8 18-2-7-8-3Z" },
   { id: "messages", label: { en: "Client Messages", ar: "رسائل العملاء" }, icon: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" },
   { id: "reminders", label: { en: "Reminders", ar: "التذكيرات" }, icon: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" },
   { id: "calendar", label: { en: "Calendar", ar: "التقويم" }, icon: "M3 9h18M7 3v4m10-4v4M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" },
@@ -1047,8 +1045,6 @@ export function DoctorDashboard() {
           {activeNav === "bookings" && <OnlineBookings />}
 
           {activeNav === "whatsapp" && <WhatsAppLink />}
-
-          {activeNav === "outreach" && <OutreachManager />}
 
           {activeNav === "messages" && (
             <ClientMessages initialPhone={openChatPhone} onOpened={handleChatOpened} />
