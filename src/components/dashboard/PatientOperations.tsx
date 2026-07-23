@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLang } from "@/lib/language";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/Toast";
 import { formatMoney } from "@/lib/patients";
 import { PatientPrescriptions } from "./PatientPrescriptions";
 
@@ -42,6 +44,8 @@ const METHOD_LABEL: Record<string, { en: string; ar: string }> = {
 
 export function PatientOperations({ phone, name }: { phone: string; name: string }) {
   const { tr, lang } = useLang();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [totals, setTotals] = useState<Totals>({ billed: 0, paid: 0, balance: 0 });
@@ -91,14 +95,64 @@ export function PatientOperations({ phone, name }: { phone: string; name: string
     new Intl.DateTimeFormat(lang === "ar" ? "ar-EG" : "en-US", { day: "numeric", month: "short", year: "numeric" }).format(new Date(iso));
 
   const deleteTreatment = async (id: string) => {
-    if (!window.confirm(tr({ en: "Delete this operation?", ar: "حذف هذه العملية؟" }))) return;
-    await fetch(`/api/admin/treatments/${id}`, { method: "DELETE" });
+    if (!(await confirm({ message: tr({ en: "Delete this operation?", ar: "حذف هذه العملية؟" }), tone: "danger" }))) return;
+    const res = await fetch(`/api/admin/treatments/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error(tr({ en: "Could not delete the operation.", ar: "تعذر حذف العملية." }));
+      return;
+    }
     reload();
   };
   const deletePayment = async (id: string) => {
-    if (!window.confirm(tr({ en: "Delete this payment?", ar: "حذف هذه الدفعة؟" }))) return;
-    await fetch(`/api/admin/payments/${id}`, { method: "DELETE" });
+    if (!(await confirm({ message: tr({ en: "Delete this payment?", ar: "حذف هذه الدفعة؟" }), tone: "danger" }))) return;
+    const res = await fetch(`/api/admin/payments/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error(tr({ en: "Could not delete the payment.", ar: "تعذر حذف الدفعة." }));
+      return;
+    }
     reload();
+  };
+
+  const openPrint = (id: string) => window.open(`/dashboard/finance/documents/${id}/print`, "_blank", "noopener");
+
+  const issueReceipt = async (paymentId: string) => {
+    try {
+      const res = await fetch("/api/admin/finance/receipts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentId }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.document?.id) {
+        toast.error(tr({ en: "Could not create the receipt.", ar: "تعذر إنشاء الإيصال." }));
+        return;
+      }
+      openPrint(j.document.id);
+    } catch {
+      toast.error(tr({ en: "Could not create the receipt.", ar: "تعذر إنشاء الإيصال." }));
+    }
+  };
+
+  const issueInvoice = async () => {
+    if (treatments.length === 0) {
+      toast.error(tr({ en: "No operations to invoice yet.", ar: "لا توجد عمليات للفوترة بعد." }));
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin/finance/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.document?.id) {
+        toast.error(tr({ en: "Could not create the invoice.", ar: "تعذر إنشاء الفاتورة." }));
+        return;
+      }
+      openPrint(j.document.id);
+    } catch {
+      toast.error(tr({ en: "Could not create the invoice.", ar: "تعذر إنشاء الفاتورة." }));
+    }
   };
 
   return (
@@ -132,6 +186,14 @@ export function PatientOperations({ phone, name }: { phone: string; name: string
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10h18M3 6h18v12H3zM7 15h4" /></svg>
           {tr({ en: "Record payment", ar: "تسجيل دفعة" })}
+        </button>
+        <button
+          onClick={issueInvoice}
+          title={tr({ en: "Create a printable invoice for this patient", ar: "إنشاء فاتورة قابلة للطباعة لهذا المريض" })}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 px-3 py-1.5 text-sm font-semibold text-primary transition hover:bg-primary/5"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2h8l4 4v16H4V2h4zM8 2v4h8M8 11h8M8 15h5" /></svg>
+          {tr({ en: "Invoice", ar: "فاتورة" })}
         </button>
       </div>
 
@@ -222,13 +284,22 @@ export function PatientOperations({ phone, name }: { phone: string; name: string
                       <span className="rounded-md bg-primary/8 px-1.5 py-0.5 text-[10px] font-semibold text-muted">{tr(METHOD_LABEL[p.method] ?? { en: p.method, ar: p.method })}</span>
                       <span className="text-[11px] text-muted">{fmtDate(p.paidAt)}</span>
                     </span>
-                    <button
-                      onClick={() => deletePayment(p.id)}
-                      title={tr({ en: "Delete", ar: "حذف" })}
-                      className="grid h-6 w-6 place-items-center rounded-md text-muted transition hover:bg-rose-500/10 hover:text-rose-600"
-                    >
-                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-13M9 7V4h6v3" /></svg>
-                    </button>
+                    <span className="flex items-center gap-1">
+                      <button
+                        onClick={() => issueReceipt(p.id)}
+                        title={tr({ en: "Print receipt", ar: "طباعة إيصال" })}
+                        className="grid h-6 w-6 place-items-center rounded-md text-muted transition hover:bg-primary/10 hover:text-primary"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2h9l3 3v17l-3-2-3 2-3-2-3 2V2zM9 8h6M9 12h6M9 16h4" /></svg>
+                      </button>
+                      <button
+                        onClick={() => deletePayment(p.id)}
+                        title={tr({ en: "Delete", ar: "حذف" })}
+                        className="grid h-6 w-6 place-items-center rounded-md text-muted transition hover:bg-rose-500/10 hover:text-rose-600"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-13M9 7V4h6v3" /></svg>
+                      </button>
+                    </span>
                   </div>
                 ))}
               </div>

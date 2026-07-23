@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLang } from "@/lib/language";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/Toast";
 
 type FileRec = {
   id: string;
@@ -37,6 +39,8 @@ const isImage = (m: string) => m.startsWith("image/");
 
 export function PatientFiles({ patientKey, patientName }: { patientKey: string; patientName: string }) {
   const { tr, lang } = useLang();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [files, setFiles] = useState<FileRec[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -92,8 +96,12 @@ export function PatientFiles({ patientKey, patientName }: { patientKey: string; 
   );
 
   const remove = async (f: FileRec) => {
-    if (!window.confirm(tr({ en: `Delete "${f.fileName}"?`, ar: `حذف "${f.fileName}"؟` }))) return;
-    await fetch(`/api/admin/patient-files/${f.id}`, { method: "DELETE" });
+    if (!(await confirm({ message: tr({ en: `Delete "${f.fileName}"?`, ar: `حذف "${f.fileName}"؟` }), tone: "danger" }))) return;
+    const res = await fetch(`/api/admin/patient-files/${f.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error(tr({ en: "Could not delete the file.", ar: "تعذر حذف الملف." }));
+      return;
+    }
     setFiles((prev) => prev.filter((x) => x.id !== f.id));
   };
 

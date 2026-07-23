@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useLang } from "@/lib/language";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { Modal, Field, inputCls } from "./Modal";
 import {
   type Patient,
@@ -16,6 +17,9 @@ import {
 import { initials, isoDate } from "@/lib/dashboard";
 import { PatientFiles } from "./PatientFiles";
 import { PatientOperations } from "./PatientOperations";
+import { DentalChart } from "./DentalChart";
+import { OrthoTracker } from "./OrthoTracker";
+import { CareScoreRing } from "./CareScoreRing";
 
 /* ============================ Forms ============================ */
 
@@ -31,6 +35,7 @@ function PatientForm({
     email: string;
     gender: "male" | "female" | "";
     notes: string;
+    remainingSessions: number | null;
     medical: MedicalHistory;
   }) => void;
   onCancel: () => void;
@@ -41,6 +46,9 @@ function PatientForm({
   const [email, setEmail] = useState(initial?.email ?? "");
   const [gender, setGender] = useState<"male" | "female" | "">(initial?.gender ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [remainingSessions, setRemainingSessions] = useState(
+    initial?.remainingSessions != null ? String(initial.remainingSessions) : ""
+  );
   const [bloodType, setBloodType] = useState(initial?.medical?.bloodType ?? "");
   const [allergies, setAllergies] = useState(initial?.medical?.allergies ?? "");
   const [conditions, setConditions] = useState(initial?.medical?.conditions ?? "");
@@ -59,6 +67,7 @@ function PatientForm({
           email: email.trim(),
           gender,
           notes: notes.trim(),
+          remainingSessions: remainingSessions.trim() === "" ? null : Math.max(0, Math.trunc(Number(remainingSessions) || 0)),
           medical: {
             bloodType: bloodType.trim() || undefined,
             allergies: allergies.trim() || undefined,
@@ -88,6 +97,18 @@ function PatientForm({
       </Field>
       <Field label={tr({ en: "Notes (optional)", ar: "ملاحظات (اختياري)" })}>
         <textarea className={`${inputCls} resize-none`} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </Field>
+      <Field label={tr({ en: "Remaining sessions (optional)", ar: "الجلسات المتبقية (اختياري)" })}>
+        <input
+          className={inputCls}
+          type="number"
+          min="0"
+          inputMode="numeric"
+          dir="ltr"
+          value={remainingSessions}
+          onChange={(e) => setRemainingSessions(e.target.value)}
+          placeholder={tr({ en: "e.g. 8", ar: "مثال: ٨" })}
+        />
       </Field>
 
       {/* medical history */}
@@ -194,6 +215,7 @@ export function PatientsSection({
   onDeletePatient: (id: string) => void;
 }) {
   const { tr, lang } = useLang();
+  const confirm = useConfirm();
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(patients[0]?.id ?? null);
   const [modal, setModal] = useState<ModalState>({ type: "none" });
@@ -212,6 +234,7 @@ export function PatientsSection({
     email: string;
     gender: "male" | "female" | "";
     notes: string;
+    remainingSessions: number | null;
     medical: MedicalHistory;
   }) => {
     if (modal.type !== "patient") return;
@@ -224,6 +247,7 @@ export function PatientsSection({
         email: data.email || undefined,
         gender: data.gender || undefined,
         notes: data.notes || undefined,
+        remainingSessions: data.remainingSessions ?? undefined,
         medical: hasMedical ? data.medical : undefined,
       });
     } else {
@@ -233,6 +257,7 @@ export function PatientsSection({
         email: data.email || undefined,
         gender: data.gender || undefined,
         notes: data.notes || undefined,
+        remainingSessions: data.remainingSessions ?? undefined,
         medical: hasMedical ? data.medical : undefined,
         source: "manual",
         createdAt: isoDate(base),
@@ -243,8 +268,8 @@ export function PatientsSection({
     close();
   };
 
-  const removePatient = (p: Patient) => {
-    if (!window.confirm(tr({ en: `Delete client "${p.name}"? This cannot be undone.`, ar: `حذف العميل "${p.name}"؟ لا يمكن التراجع.` }))) return;
+  const removePatient = async (p: Patient) => {
+    if (!(await confirm({ message: tr({ en: `Delete client "${p.name}"? This cannot be undone.`, ar: `حذف العميل "${p.name}"؟ لا يمكن التراجع.` }), tone: "danger" }))) return;
     onDeletePatient(p.id);
     setSelectedId(null);
   };
@@ -424,6 +449,22 @@ function ProfileDetail({
                 ? tr({ en: "From booking", ar: "من حجز" })
                 : tr({ en: "Manual", ar: "يدوي" })}
             </span>
+            {patient.mrn && (
+              <span dir="ltr" className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-surface-2 px-2 py-0.5 font-mono text-[10px] font-bold text-muted" title={tr({ en: "Medical Record Number", ar: "رقم الملف الطبي" })}>
+                <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 8h10M7 12h6M7 16h4" />
+                </svg>
+                {patient.mrn}
+              </span>
+            )}
+            {patient.remainingSessions != null && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/8 px-2 py-0.5 text-[10px] font-bold text-primary" title={tr({ en: "Remaining treatment-plan sessions", ar: "الجلسات المتبقية في خطة العلاج" })}>
+                <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+                </svg>
+                {patient.remainingSessions} {tr({ en: "sessions left", ar: "جلسة متبقية" })}
+              </span>
+            )}
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
             <a href={`tel:${patient.phone.replace(/\s/g, "")}`} dir="ltr" className="inline-flex items-center gap-1.5 transition hover:text-primary">
@@ -459,6 +500,7 @@ function ProfileDetail({
             )}
           </div>
         </div>
+        <CareScoreRing key={patient.id} patientId={patient.id} />
         <div className="flex items-center gap-2">
           <button
             onClick={onEditPatient}
@@ -482,6 +524,13 @@ function ProfileDetail({
 
       {/* Operations & payments — the single money + treatment view */}
       <PatientOperations phone={patient.phone} name={patient.name} />
+
+      {/* Interactive dental chart (tooth map) */}
+      <DentalChart patientId={patient.id} />
+
+      {/* Orthodontic case tracker */}
+      <OrthoTracker patientId={patient.id} />
+
 
       {/* medical history */}
       {patient.medical && Object.values(patient.medical).some(Boolean) && (

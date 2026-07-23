@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLang } from "@/lib/language";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/Toast";
 
 export type MedicationLite = {
   id: string;
@@ -54,6 +56,8 @@ const inputCls =
 
 export function PatientPrescriptions({ phone, name }: { phone: string; name: string }) {
   const { tr, lang } = useLang();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [rows, setRows] = useState<Rx[]>([]);
   const [medications, setMedications] = useState<MedicationLite[]>([]);
   const [doctors, setDoctors] = useState<RxDoctorLite[]>([]);
@@ -104,14 +108,22 @@ export function PatientPrescriptions({ phone, name }: { phone: string; name: str
   const printRx = (id: string) => window.open(`/dashboard/prescriptions/${id}/print`, "_blank", "noopener");
 
   const cancelRx = async (id: string) => {
-    if (!window.confirm(tr({ en: "Cancel this prescription?", ar: "إلغاء هذه الروشتة؟" }))) return;
-    await fetch(`/api/admin/prescriptions/${id}/cancel`, { method: "POST" });
+    if (!(await confirm({ message: tr({ en: "Cancel this prescription?", ar: "إلغاء هذه الروشتة؟" }), tone: "danger" }))) return;
+    const res = await fetch(`/api/admin/prescriptions/${id}/cancel`, { method: "POST" });
+    if (!res.ok) {
+      toast.error(tr({ en: "Could not cancel the prescription.", ar: "تعذر إلغاء الروشتة." }));
+      return;
+    }
     reload();
   };
 
   const deleteRx = async (id: string) => {
-    if (!window.confirm(tr({ en: "Delete this prescription?", ar: "حذف هذه الروشتة؟" }))) return;
-    await fetch(`/api/admin/prescriptions/${id}`, { method: "DELETE" });
+    if (!(await confirm({ message: tr({ en: "Delete this prescription?", ar: "حذف هذه الروشتة؟" }), tone: "danger" }))) return;
+    const res = await fetch(`/api/admin/prescriptions/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error(tr({ en: "Could not delete the prescription.", ar: "تعذر حذف الروشتة." }));
+      return;
+    }
     reload();
   };
 
