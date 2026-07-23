@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLang } from "@/lib/language";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/Toast";
 import { formatMoney } from "@/lib/patients";
 
 type Doctor = {
@@ -71,6 +73,8 @@ function fileToDataUrl(file: File, max = 256): Promise<string> {
 
 export function DoctorsManager() {
   const { tr, lang } = useLang();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Draft | null>(null);
@@ -141,8 +145,12 @@ export function DoctorsManager() {
   };
 
   const remove = async (d: Doctor) => {
-    if (!window.confirm(tr({ en: `Delete Dr. ${dName(d)}? Their past earnings history will be removed from reports.`, ar: `حذف د. ${dName(d)}؟ سيُزال سجل أرباحه من التقارير.` }))) return;
-    await fetch(`/api/admin/doctors/${d.id}`, { method: "DELETE" });
+    if (!(await confirm({ message: tr({ en: `Delete Dr. ${dName(d)}? Their past earnings history will be removed from reports.`, ar: `حذف د. ${dName(d)}؟ سيُزال سجل أرباحه من التقارير.` }), tone: "danger" }))) return;
+    const res = await fetch(`/api/admin/doctors/${d.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error(tr({ en: "Could not delete the doctor.", ar: "تعذر حذف الطبيب." }));
+      return;
+    }
     load();
   };
 

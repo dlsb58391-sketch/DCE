@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useLang } from "@/lib/language";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { api, ApiError } from "./api";
 import type { Item, PurchaseOrder, Supplier } from "./types";
 import { Badge, btnDanger, btnGhost, btnPrimary, Field, inputCls, Modal, PO_STATUS_LABEL, poStatusTone, useFmt } from "./ui";
@@ -351,6 +352,7 @@ export function PoReceiveModal({ onClose, notify, onDone, po }: Common & { po: P
 
 export function PoDetailModal({ onClose, notify, onDone, id, canWrite }: Common & { id: string; canWrite: boolean }) {
   const { tr, lang } = useLang();
+  const confirm = useConfirm();
   const fmt = useFmt();
   const [po, setPo] = useState<PurchaseOrder | null>(null);
   const [loading, setLoading] = useState(true);
@@ -402,12 +404,12 @@ export function PoDetailModal({ onClose, notify, onDone, id, canWrite }: Common 
   };
 
   const submit = () => runAction(() => api.submitPurchaseOrder(id), { en: "Purchase order submitted.", ar: "تم إرسال أمر الشراء." });
-  const cancel = () => {
-    if (!window.confirm(tr({ en: "Cancel this purchase order? Received stock is kept.", ar: "إلغاء أمر الشراء؟ يتم الاحتفاظ بالمخزون المستلم." }))) return;
+  const cancel = async () => {
+    if (!(await confirm({ message: tr({ en: "Cancel this purchase order? Received stock is kept.", ar: "إلغاء أمر الشراء؟ يتم الاحتفاظ بالمخزون المستلم." }), tone: "danger" }))) return;
     void runAction(() => api.cancelPurchaseOrder(id), { en: "Purchase order cancelled.", ar: "تم إلغاء أمر الشراء." });
   };
-  const remove = () => {
-    if (!window.confirm(tr({ en: "Move this purchase order to the Recycle Bin?", ar: "نقل أمر الشراء إلى سلة المحذوفات؟" }))) return;
+  const remove = async () => {
+    if (!(await confirm({ message: tr({ en: "Move this purchase order to the Recycle Bin?", ar: "نقل أمر الشراء إلى سلة المحذوفات؟" }), tone: "danger" }))) return;
     void runAction(async () => {
       await api.deletePurchaseOrder(id);
       onClose();

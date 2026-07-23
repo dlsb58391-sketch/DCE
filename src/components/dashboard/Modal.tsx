@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useId, useRef, type ReactNode } from "react";
 import { useLang } from "@/lib/language";
+import { useModalA11y } from "@/hooks/useModalA11y";
+
+const SIZE_CLS: Record<"md" | "lg" | "xl", string> = {
+  md: "max-w-md",
+  lg: "max-w-lg",
+  xl: "max-w-2xl",
+};
 
 export function Modal({
   open,
@@ -9,28 +16,21 @@ export function Modal({
   title,
   children,
   footer,
+  size = "lg",
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  /** Panel max-width. Defaults to `lg` (max-w-lg). */
+  size?: "md" | "lg" | "xl";
 }) {
   const { dir } = useLang();
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const titleId = useId();
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [open, onClose]);
+  useModalA11y({ open, onClose, containerRef: panelRef });
 
   if (!open) return null;
 
@@ -41,15 +41,23 @@ export function Modal({
         onClick={onClose}
         aria-hidden
       />
-      <div className="dash-light relative z-10 max-h-[92vh] w-full max-w-lg overflow-hidden rounded-t-2xl border border-primary/15 bg-surface text-ink shadow-2xl sm:rounded-2xl">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className={`dash-light relative z-10 max-h-[92vh] w-full ${SIZE_CLS[size]} overflow-hidden rounded-t-2xl border border-primary/15 bg-surface text-ink shadow-2xl outline-none sm:rounded-2xl`}
+      >
         <div className="flex items-center justify-between gap-3 border-b border-primary/10 p-4">
-          <h3 className="text-base font-bold text-ink">{title}</h3>
+          <h3 id={titleId} className="text-base font-bold text-ink">{title}</h3>
           <button
+            type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={dir === "rtl" ? "إغلاق" : "Close"}
             className="grid h-8 w-8 place-items-center rounded-lg text-muted transition hover:bg-primary/10 hover:text-ink"
           >
-            <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M18 6 6 18M6 6l12 12" />
             </svg>
           </button>

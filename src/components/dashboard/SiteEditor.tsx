@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useLang } from "@/lib/language";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { Field, inputCls } from "./Modal";
 import {
   useSite,
@@ -67,6 +68,7 @@ const THEME_FIELDS: { key: keyof Theme; label: { en: string; ar: string } }[] = 
 
 export function SiteEditor() {
   const { tr } = useLang();
+  const confirm = useConfirm();
   const { settings, update, resetSettings } = useSite();
   const photoInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -141,7 +143,7 @@ export function SiteEditor() {
             </svg>
             {tr({ en: "Preview", ar: "معاينة" })}
           </a>
-          <button onClick={() => { if (window.confirm(tr({ en: "Reset all landing content to defaults?", ar: "إعادة كل المحتوى للوضع الافتراضي؟" }))) resetSettings(); }} className="rounded-lg border border-primary/15 px-3 py-2 text-sm font-semibold text-muted transition hover:border-rose-400/40 hover:text-rose-600">
+          <button onClick={async () => { if (await confirm({ message: tr({ en: "Reset all landing content to defaults?", ar: "إعادة كل المحتوى للوضع الافتراضي؟" }), tone: "danger" })) resetSettings(); }} className="rounded-lg border border-primary/15 px-3 py-2 text-sm font-semibold text-muted transition hover:border-rose-400/40 hover:text-rose-600">
             {tr({ en: "Reset", ar: "إعادة تعيين" })}
           </button>
         </div>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useLang } from "@/lib/language";
 import { t } from "@/lib/content";
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -14,6 +15,7 @@ import { OffersManager } from "./OffersManager";
 import { SiteEditor } from "./SiteEditor";
 import { OnlineBookings } from "./OnlineBookings";
 import { WhatsAppLink } from "./WhatsAppLink";
+import { OutreachManager } from "./OutreachManager";
 import { ClientMessages } from "./ClientMessages";
 import { SettingsSection } from "./SettingsSection";
 import { OperationsManager } from "./OperationsManager";
@@ -83,6 +85,7 @@ function StatCard({
 
 const navItems = [
   { id: "overview", label: { en: "Overview", ar: "الرئيسية" }, icon: "M3 12 12 4l9 8M5 10v9h5v-6h4v6h5v-9" },
+  { id: "outreach", label: { en: "Outreach", ar: "التسويق" }, icon: "M3 11l18-8-8 18-2-7-8-3Z" },
   { id: "analytics", label: { en: "Analytics", ar: "التحليلات" }, icon: "M4 20V10M10 20V4M16 20v-7M20 20H3" },
   { id: "revenue", label: { en: "Revenue", ar: "الإيرادات" }, icon: "M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" },
   { id: "earnings", label: { en: "Earnings", ar: "الأرباح" }, icon: "M3 3v18h18M7 14l4-4 3 3 5-6" },
@@ -98,14 +101,21 @@ const navItems = [
   { id: "editor", label: { en: "Site Editor", ar: "محرر الموقع" }, icon: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" },
   { id: "settings", label: { en: "Settings", ar: "الإعدادات" }, icon: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7-3a7 7 0 0 0-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1L14.5 2h-5l-.3 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.3 2.5h5l.3-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6c.07-.33.1-.66.1-1Z" },
 ] as const;
+type NavId = (typeof navItems)[number]["id"];
+const navIds = new Set<NavId>(navItems.map((item) => item.id));
+function isNavId(value: string | null): value is NavId {
+  return !!value && navIds.has(value as NavId);
+}
 
 // Standalone dashboard screens that live on their own routes (not tab panels).
 // Rendered as links beneath the tab list so these shipped features are reachable
 // from the menu instead of only by typing the URL.
 const linkItems = [
+  { href: "/dashboard/finance", label: { en: "Finance", ar: "المالية" }, icon: "M3 6h18M3 12h18M3 18h18M8 6v12M16 6v12" },
   { href: "/dashboard/inventory", label: { en: "Inventory", ar: "المخزون" }, icon: "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16ZM3.3 7 12 12l8.7-5M12 22V12" },
   { href: "/dashboard/branches", label: { en: "Branches", ar: "الفروع" }, icon: "M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 7h1m-1 4h1m4-4h1m-1 4h1M10 21v-4h4v4" },
   { href: "/dashboard/staff", label: { en: "Staff", ar: "الموظفون" }, icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm14 10v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11" },
+  { href: "/dashboard/permissions", label: { en: "Permissions", ar: "الصلاحيات" }, icon: "M12 2l8 4v6c0 5.5-3.8 8.7-8 10-4.2-1.3-8-4.5-8-10V6l8-4Zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm0 7h.01" },
   { href: "/dashboard/security", label: { en: "Security", ar: "الأمان" }, icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" },
   { href: "/dashboard/diagnostics", label: { en: "Diagnostics", ar: "التشخيص" }, icon: "M3 12h4l2 8 4-16 2 8h4" },
   { href: "/dashboard/recycle-bin", label: { en: "Recycle Bin", ar: "سلة المحذوفات" }, icon: "M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m1 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6" },
@@ -113,6 +123,9 @@ const linkItems = [
 
 export function DoctorDashboard() {
   const { tr, lang } = useLang();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
   const {
     leads,
     markLeadSeen,
@@ -126,13 +139,26 @@ export function DoctorDashboard() {
   const [requests, setRequests] = useState<BookingRequest[]>(seedRequests);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedOffset, setSelectedOffset] = useState(0);
-  const [activeNav, setActiveNav] = useState("overview");
+  const [activeNav, setActiveNav] = useState<NavId>("overview");
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? window.localStorage.getItem("dash_theme") : null;
     if (saved === "dark" || saved === "light") setTheme(saved);
   }, []);
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (!isNavId(tab) || tab === activeNav) return;
+    setActiveNav(tab);
+  }, [activeNav, searchParams]);
+  const selectNav = useCallback((next: NavId) => {
+    setActiveNav(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "overview") params.delete("tab");
+    else params.set("tab", next);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
   const toggleTheme = useCallback(() => {
     setTheme((t) => {
       const next = t === "dark" ? "light" : "dark";
@@ -181,6 +207,7 @@ export function DoctorDashboard() {
             email: p.email ?? "",
             gender: p.gender ?? "",
             notes: p.notes ?? "",
+            remainingSessions: p.remainingSessions ?? null,
             medical: p.medical ?? null,
           }),
         });
@@ -439,7 +466,7 @@ export function DoctorDashboard() {
 
   const openFollowupChat = (r: FollowupReply) => {
     setOpenChatPhone(r.phone);
-    setActiveNav("messages");
+    selectNav("messages");
     // Optimistically drop it from the alert list; the next poll confirms (the
     // thread GET marks it read server-side).
     setFollowupReplies((prev) => prev.filter((x) => x.phone !== r.phone));
@@ -670,7 +697,7 @@ export function DoctorDashboard() {
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveNav(item.id)}
+              onClick={() => selectNav(item.id)}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
                 activeNav === item.id
                   ? "bg-primary/15 text-primary"
@@ -785,7 +812,7 @@ export function DoctorDashboard() {
             {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveNav(item.id)}
+                onClick={() => selectNav(item.id)}
                 className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${
                   activeNav === item.id
                     ? "border-primary bg-primary/15 text-primary"
@@ -1045,6 +1072,8 @@ export function DoctorDashboard() {
           {activeNav === "bookings" && <OnlineBookings />}
 
           {activeNav === "whatsapp" && <WhatsAppLink />}
+
+          {activeNav === "outreach" && <OutreachManager />}
 
           {activeNav === "messages" && (
             <ClientMessages initialPhone={openChatPhone} onOpened={handleChatOpened} />

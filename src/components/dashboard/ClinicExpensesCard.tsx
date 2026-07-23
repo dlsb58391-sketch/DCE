@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLang } from "@/lib/language";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/Toast";
 import { formatMoney } from "@/lib/patients";
 
 type Expense = {
@@ -32,6 +34,8 @@ const monthKeyNow = () => {
  * optional per-month override. Feeds the Revenue page's net-profit numbers. */
 export function ClinicExpensesCard() {
   const { tr, lang } = useLang();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [month, setMonth] = useState(monthKeyNow());
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [total, setTotal] = useState(0);
@@ -84,8 +88,12 @@ export function ClinicExpensesCard() {
   };
 
   const remove = async (e: Expense) => {
-    if (!window.confirm(tr({ en: `Delete "${e.labelEn || e.labelAr}"?`, ar: `حذف "${e.labelAr || e.labelEn}"؟` }))) return;
-    await fetch(`/api/admin/expenses/${e.id}`, { method: "DELETE" });
+    if (!(await confirm({ message: tr({ en: `Delete "${e.labelEn || e.labelAr}"?`, ar: `حذف "${e.labelAr || e.labelEn}"؟` }), tone: "danger" }))) return;
+    const res = await fetch(`/api/admin/expenses/${e.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error(tr({ en: "Could not delete the expense.", ar: "تعذر حذف المصروف." }));
+      return;
+    }
     await load(month);
   };
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useLang } from "@/lib/language";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { Modal, Field, inputCls } from "./Modal";
 import {
   useSite,
@@ -131,6 +132,7 @@ function OfferForm({
 
 export function OffersManager() {
   const { tr, lang } = useLang();
+  const confirm = useConfirm();
   const { settings, update } = useSite();
   const [editing, setEditing] = useState<Offer | null>(null);
   const [open, setOpen] = useState(false);
@@ -160,8 +162,8 @@ export function OffersManager() {
   const toggle = (id: string) =>
     update({ offers: settings.offers.map((x) => (x.id === id ? { ...x, active: !x.active } : x)) });
 
-  const remove = (id: string) => {
-    if (!window.confirm(tr({ en: "Delete this offer?", ar: "حذف هذا العرض؟" }))) return;
+  const remove = async (id: string) => {
+    if (!(await confirm({ message: tr({ en: "Delete this offer?", ar: "حذف هذا العرض؟" }), tone: "danger" }))) return;
     update({ offers: settings.offers.filter((x) => x.id !== id) });
   };
 

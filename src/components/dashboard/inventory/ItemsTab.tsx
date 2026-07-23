@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLang } from "@/lib/language";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { api, ApiError } from "./api";
 import type { Item, Supplier } from "./types";
 import { AdjustModal, DetailModal, ItemFormModal, ReceiveModal } from "./ItemModals";
@@ -12,6 +13,7 @@ type ModalKind = "edit" | "receive" | "adjust" | "detail" | null;
 
 export function ItemsTab({ notify, canWrite }: { notify: Notify; canWrite: boolean }) {
   const { tr } = useLang();
+  const confirm = useConfirm();
   const fmt = useFmt();
   const [items, setItems] = useState<Item[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -52,7 +54,7 @@ export function ItemsTab({ notify, canWrite }: { notify: Notify; canWrite: boole
   const closeModal = () => setModal(null);
 
   const remove = async (item: Item) => {
-    if (!window.confirm(tr({ en: "Move this item to the Recycle Bin?", ar: "نقل هذا الصنف إلى سلة المحذوفات؟" }))) return;
+    if (!(await confirm({ message: tr({ en: "Move this item to the Recycle Bin?", ar: "نقل هذا الصنف إلى سلة المحذوفات؟" }), tone: "danger" }))) return;
     setBusyId(item.id);
     try {
       await api.deleteItem(item.id);

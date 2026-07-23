@@ -9,7 +9,7 @@ const inputCls =
   "w-full rounded-lg border border-primary/15 bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-primary";
 
 export type PickedClient = { name: string; phone: string; patientId: string | null };
-type Found = { id: string; name: string; phone: string; createdAt?: string };
+type Found = { id: string; name: string; phone: string; createdAt?: string; mrn?: string };
 
 const tail = (p: string) => (p || "").replace(/\D/g, "").slice(-9);
 
@@ -151,7 +151,12 @@ export function ClientPicker({
               >
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-bold text-ink">{p.name}</span>
-                  <span className="block truncate text-[11px] text-muted" dir="ltr">{p.phone}</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="truncate text-[11px] text-muted" dir="ltr">{p.phone}</span>
+                    {p.mrn && (
+                      <span className="shrink-0 font-mono text-[10px] text-muted/70" dir="ltr">· {p.mrn}</span>
+                    )}
+                  </span>
                 </span>
                 <span className="shrink-0 text-[11px] font-semibold text-primary">{tr({ en: "Select", ar: "اختيار" })}</span>
               </button>

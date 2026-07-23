@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useLang } from "@/lib/language";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 /** One trashed entity type with its current count (from GET /api/admin/trash). */
 type TypeInfo = { type: string; label: string; count: number };
@@ -39,6 +40,7 @@ const PAGE_LIMIT = 100;
 
 export function RecycleBin() {
   const { tr, lang } = useLang();
+  const confirm = useConfirm();
   const [types, setTypes] = useState<TypeInfo[]>([]);
   const [total, setTotal] = useState(0);
   const [activeType, setActiveType] = useState<string | null>(null);
@@ -124,12 +126,13 @@ export function RecycleBin() {
   };
 
   const purge = async (item: TrashItem) => {
-    const first = window.confirm(
-      tr({
+    const first = await confirm({
+      message: tr({
         en: "Permanently delete this record? This cannot be undone.",
         ar: "حذف هذا السجل نهائيًا؟ لا يمكن التراجع عن ذلك.",
       }),
-    );
+      tone: "danger",
+    });
     if (!first) return;
     setBusyId(item.id);
     setNotice(null);
@@ -140,12 +143,13 @@ export function RecycleBin() {
         body: JSON.stringify({ type: item.type, id: item.id }),
       });
       if (res.status === 409) {
-        const forced = window.confirm(
-          tr({
+        const forced = await confirm({
+          message: tr({
             en: "This record is linked to financial or medical history. Delete it anyway?",
             ar: "هذا السجل مرتبط بسجل مالي أو طبي. هل تريد حذفه على أي حال؟",
           }),
-        );
+          tone: "danger",
+        });
         if (!forced) return;
         res = await fetch("/api/admin/trash/purge", {
           method: "POST",

@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLang } from "@/lib/language";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 type Branch = {
   id: string;
@@ -57,6 +59,7 @@ function roleLabel(role: string, tr: (m: { en: string; ar: string }) => string):
 
 export function StaffManager() {
   const { tr, lang } = useLang();
+  const confirm = useConfirm();
   const [rows, setRows] = useState<StaffUser[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,7 +123,7 @@ export function StaffManager() {
         en: `Delete account "${u.name}" (${u.email})? This cannot be undone.`,
         ar: `حذف حساب "${u.name}" (${u.email})؟ لا يمكن التراجع عن هذا.`,
       });
-      if (!window.confirm(msg)) return;
+      if (!(await confirm({ message: msg, tone: "danger" }))) return;
       setBusyId(u.id);
       setNotice(null);
       try {
@@ -139,7 +142,7 @@ export function StaffManager() {
         setBusyId(null);
       }
     },
-    [reload, tr],
+    [confirm, reload, tr],
   );
 
   if (isAdmin === false) {
@@ -361,14 +364,23 @@ function StaffModal({
     }
   }, [form, isEdit, onError, onSaved, tr, user]);
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  useModalA11y({ open: true, onClose, containerRef: panelRef });
+  const title = isEdit ? tr({ en: "Edit account", ar: "تعديل الحساب" }) : tr({ en: "New account", ar: "حساب جديد" });
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
         className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-surface p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-4 text-lg font-semibold text-ink">
-          {isEdit ? tr({ en: "Edit account", ar: "تعديل الحساب" }) : tr({ en: "New account", ar: "حساب جديد" })}
+          {title}
         </h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="text-sm sm:col-span-2">

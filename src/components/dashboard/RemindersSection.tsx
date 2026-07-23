@@ -10,6 +10,7 @@ type Debtor = {
   phone: string;
   billed: number;
   paid: number;
+  refunds?: number;
   balance: number;
   lastVisit: string | null;
   lastRemindedAt: string | null;
@@ -183,6 +184,13 @@ export function RemindersSection() {
                     <p className="text-[11px] text-muted">{tr({ en: "Owes", ar: "عليه" })}</p>
                     <p className="text-lg font-extrabold text-rose-600">{formatMoney(d.balance, lang)}</p>
                   </div>
+                  <button
+                    onClick={() => window.open(`/dashboard/finance/statements/${d.patientId}/print`, "_blank", "noopener")}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2h8l4 4v16H4V2h4zM8 2v4h8M8 11h8M8 15h5" /></svg>
+                    {tr({ en: "Statement", ar: "كشف حساب" })}
+                  </button>
                   <WaButton onClick={() => send(d, "payment", d.balance)} busy={!!sending[d.phone]} label={tr({ en: "Remind", ar: "تذكير" })} />
                 </div>
               ))}

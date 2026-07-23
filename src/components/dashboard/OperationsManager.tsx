@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLang } from "@/lib/language";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/Toast";
 import { formatMoney } from "@/lib/patients";
 
 type Procedure = {
@@ -17,6 +19,8 @@ type Draft = { id?: string; nameEn: string; nameAr: string; price: string; cost:
 
 export function OperationsManager() {
   const { tr, lang } = useLang();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Draft | null>(null);
@@ -82,8 +86,12 @@ export function OperationsManager() {
   };
 
   const remove = async (p: Procedure) => {
-    if (!window.confirm(tr({ en: `Delete "${p.nameEn}"?`, ar: `حذف "${p.nameAr}"؟` }))) return;
-    await fetch(`/api/admin/procedures/${p.id}`, { method: "DELETE" });
+    if (!(await confirm({ message: tr({ en: `Delete "${p.nameEn}"?`, ar: `حذف "${p.nameAr}"؟` }), tone: "danger" }))) return;
+    const res = await fetch(`/api/admin/procedures/${p.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error(tr({ en: "Could not delete the procedure.", ar: "تعذر حذف الإجراء." }));
+      return;
+    }
     load();
   };
 

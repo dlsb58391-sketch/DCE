@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLang } from "@/lib/language";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { api, ApiError } from "./api";
 import type { Supplier } from "./types";
 import { Badge, btnDanger, btnGhost, btnPrimary, Field, inputCls, Modal } from "./ui";
@@ -51,6 +52,7 @@ function toForm(s: Supplier): FormState {
 
 export function SuppliersTab({ notify, canWrite }: { notify: Notify; canWrite: boolean }) {
   const { tr } = useLang();
+  const confirm = useConfirm();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Supplier | null>(null);
@@ -125,7 +127,7 @@ export function SuppliersTab({ notify, canWrite }: { notify: Notify; canWrite: b
   };
 
   const remove = async (s: Supplier) => {
-    if (!window.confirm(tr({ en: "Move this supplier to the Recycle Bin?", ar: "نقل هذا المورّد إلى سلة المحذوفات؟" }))) return;
+    if (!(await confirm({ message: tr({ en: "Move this supplier to the Recycle Bin?", ar: "نقل هذا المورّد إلى سلة المحذوفات؟" }), tone: "danger" }))) return;
     setBusyId(s.id);
     try {
       await api.deleteSupplier(s.id);
